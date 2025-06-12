@@ -20,18 +20,14 @@ class InMemoryTicketAlgebra[F[_]: Sync](ref: Ref[F, Map[TicketId, Ticket]]) exte
     ref.get.map(_.values.filter(_.showtimeId == showtimeId).toList)
   }
 
+  def findBySeatAndShowtime(seatId: SeatId, showtimeId: ShowtimeId): F[Option[Ticket]] = {
+    ref.get.map(_.values.find(t => t.seatId == seatId && t.showtimeId == showtimeId))
+  }
+
   def create(ticket: Ticket): F[Ticket] = {
     ref.modify { tickets =>
       val updated = tickets + (ticket.id -> ticket)
       (updated, ticket)
-    }
-  }
-
-  def createMany(tickets: List[Ticket]): F[List[Ticket]] = {
-    ref.modify { currentTickets =>
-      val ticketMap = tickets.map(t => t.id -> t).toMap
-      val updated = currentTickets ++ ticketMap
-      (updated, tickets)
     }
   }
 

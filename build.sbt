@@ -18,10 +18,14 @@ lazy val root = (project in file("."))
       "com.github.pureconfig" %% "pureconfig-core" % "0.17.7",
       "com.github.pureconfig" %% "pureconfig-generic-scala3" % "0.17.7",
       "org.tpolecat" %% "doobie-core" % "1.0.0-RC4",
-      "org.tpolecat" %% "doobie-h2" % "1.0.0-RC4",
+      "org.tpolecat" %% "doobie-postgres" % "1.0.0-RC4",
       "org.tpolecat" %% "doobie-hikari" % "1.0.0-RC4",
+      "org.tpolecat" %% "doobie-h2" % "1.0.0-RC4",
+      "org.postgresql" % "postgresql" % "42.7.1",
+      "org.flywaydb" % "flyway-core" % "9.22.3",
       "ch.qos.logback" % "logback-classic" % "1.4.11",
       "org.scalatest" %% "scalatest" % "3.2.17" % Test,
-      "org.typelevel" %% "cats-effect-testing-scalatest" % "1.5.0" % Test
+      "org.typelevel" %% "cats-effect-testing-scalatest" % "1.5.0" % Test,
+      "org.testcontainers" % "postgresql" % "1.19.3" % Test
     )
   ) 

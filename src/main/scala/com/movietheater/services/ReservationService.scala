@@ -77,7 +77,7 @@ class ReservationService[F[_]: MonadThrow](
       }
 
       // Save tickets
-      savedTickets <- ticketAlgebra.createMany(tickets)
+      savedTickets <- tickets.traverse(ticketAlgebra.create)
       totalPrice: BigDecimal = savedTickets.map(_.price).sum
 
     } yield ReservationResponse(savedTickets, totalPrice)
