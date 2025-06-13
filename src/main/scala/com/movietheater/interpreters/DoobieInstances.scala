@@ -20,7 +20,7 @@ object DoobieInstances {
   
   // SeatType enum mapping to PostgreSQL enum
   implicit val seatTypeMeta: Meta[SeatType] = {
-    Meta[String].imap(
+    Meta[String].timap[SeatType](
       {
         case "Regular" => SeatType.Regular
         case "Premium" => SeatType.Premium
@@ -33,7 +33,7 @@ object DoobieInstances {
         case SeatType.Premium => "Premium"
         case SeatType.VIP => "VIP"
       }
-    )
+    ).asInstanceOf[Meta[SeatType]]
   }
   
   // TicketStatus enum mapping to PostgreSQL enum

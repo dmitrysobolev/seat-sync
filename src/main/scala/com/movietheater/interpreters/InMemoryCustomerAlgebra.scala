@@ -50,6 +50,10 @@ class InMemoryCustomerAlgebra[F[_]: Sync](ref: Ref[F, Map[CustomerId, Customer]]
       }
     }
   }
+
+  def deleteAll(): F[Unit] = {
+    ref.set(Map.empty)
+  }
 }
 
 object InMemoryCustomerAlgebra {

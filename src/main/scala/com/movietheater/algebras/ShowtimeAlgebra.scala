@@ -12,6 +12,7 @@ trait ShowtimeAlgebra[F[_]] {
   def create(showtime: Showtime): F[Showtime]
   def update(showtime: Showtime): F[Option[Showtime]]
   def delete(showtimeId: ShowtimeId): F[Boolean]
+  def deleteAll(): F[Unit]
 }
 
 object ShowtimeAlgebra {

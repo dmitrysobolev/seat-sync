@@ -10,6 +10,7 @@ import com.movietheater.domain._
 import com.movietheater.services.ReservationService
 import com.movietheater.http.json.JsonCodecs._
 import java.util.UUID
+import java.time.LocalDateTime
 
 class ReservationRoutes[F[_]: Concurrent: MonadThrow](reservationService: ReservationService[F]) extends Http4sDsl[F] {
   
@@ -20,9 +21,36 @@ class ReservationRoutes[F[_]: Concurrent: MonadThrow](reservationService: Reserv
   implicit val availableSeatsResponseEntityEncoder: EntityEncoder[F, AvailableSeatsResponse] = jsonEncoderOf[F, AvailableSeatsResponse]
   implicit val reservationResponseEntityEncoder: EntityEncoder[F, ReservationResponse] = jsonEncoderOf[F, ReservationResponse]
   implicit val ticketListEntityEncoder: EntityEncoder[F, List[Ticket]] = jsonEncoderOf[F, List[Ticket]]
+  implicit val showtimeListEntityEncoder: EntityEncoder[F, List[Showtime]] = jsonEncoderOf[F, List[Showtime]]
   implicit val domainErrorEntityEncoder: EntityEncoder[F, DomainError] = jsonEncoderOf[F, DomainError]
   
   val routes: HttpRoutes[F] = HttpRoutes.of[F] {
+    // Get all showtimes
+    case GET -> Root / "showtimes" =>
+      reservationService.getAllShowtimes
+        .flatMap(Ok(_))
+        .handleErrorWith {
+          case error: DomainError => BadRequest(error)
+          case _ => InternalServerError("An error occurred")
+        }
+    
+    // Get showtimes by movie
+    case GET -> Root / "movies" / CustomUUIDVar(movieId) / "showtimes" =>
+      reservationService.getShowtimesByMovie(MovieId(movieId))
+        .flatMap(Ok(_))
+        .handleErrorWith {
+          case error: DomainError => BadRequest(error)
+          case _ => InternalServerError("An error occurred")
+        }
+    
+    // Get showtimes by theater
+    case GET -> Root / "theaters" / CustomUUIDVar(theaterId) / "showtimes" =>
+      reservationService.getShowtimesByTheater(TheaterId(theaterId))
+        .flatMap(Ok(_))
+        .handleErrorWith {
+          case error: DomainError => BadRequest(error)
+          case _ => InternalServerError("An error occurred")
+        }
     
     // Get available seats for a showtime
     case GET -> Root / "showtimes" / CustomUUIDVar(showtimeId) / "seats" =>

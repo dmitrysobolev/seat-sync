@@ -150,31 +150,31 @@ object Main extends IOApp {
     customerAlgebra: com.movietheater.algebras.CustomerAlgebra[F]
   ): F[Unit] = {
     for {
-      // Check if data already exists
-      existingMovies <- movieAlgebra.findAll()
-      _ <- if (existingMovies.isEmpty) {
-        for {
-          sampleData <- createSampleData[F]
-          (movies, theaters, showtimes, seats, _, customers) = sampleData
-          
-          // Create movies
-          _ <- movies.values.toList.traverse(movieAlgebra.create)
-          
-          // Create theaters
-          _ <- theaters.values.toList.traverse(theaterAlgebra.create)
-          
-          // Create customers  
-          _ <- customers.values.toList.traverse(customerAlgebra.create)
-          
-          // Create seats
-          _ <- seats.values.toList.traverse(seatAlgebra.create)
-          
-          // Create showtimes
-          _ <- showtimes.values.toList.traverse(showtimeAlgebra.create)
-        } yield ()
-      } else {
-        Async[F].unit
-      }
+      // Clear existing data
+      _ <- movieAlgebra.deleteAll()
+      _ <- theaterAlgebra.deleteAll()
+      _ <- customerAlgebra.deleteAll()
+      _ <- seatAlgebra.deleteAll()
+      _ <- showtimeAlgebra.deleteAll()
+
+      // Create new sample data
+      sampleData <- createSampleData[F]
+      (movies, theaters, showtimes, seats, _, customers) = sampleData
+      
+      // Create movies
+      _ <- movies.values.toList.traverse(movieAlgebra.create)
+      
+      // Create theaters
+      _ <- theaters.values.toList.traverse(theaterAlgebra.create)
+      
+      // Create customers  
+      _ <- customers.values.toList.traverse(customerAlgebra.create)
+      
+      // Create seats
+      _ <- seats.values.toList.traverse(seatAlgebra.create)
+      
+      // Create showtimes
+      _ <- showtimes.values.toList.traverse(showtimeAlgebra.create)
     } yield ()
   }
 

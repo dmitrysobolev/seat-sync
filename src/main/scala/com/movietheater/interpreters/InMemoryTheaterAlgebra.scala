@@ -46,6 +46,8 @@ class InMemoryTheaterAlgebra[F[_]: Sync](ref: Ref[F, Map[TheaterId, Theater]]) e
       }
     }
   }
+
+  def deleteAll(): F[Unit] = ref.set(Map.empty)
 }
 
 object InMemoryTheaterAlgebra {

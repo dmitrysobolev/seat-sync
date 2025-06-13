@@ -35,6 +35,10 @@ class DoobieMovieAlgebra[F[_]: MonadCancelThrow](xa: Transactor[F]) extends Movi
   def delete(movieId: MovieId): F[Boolean] = {
     deleteQuery(movieId).run.transact(xa).map(_ > 0)
   }
+
+  def deleteAll(): F[Unit] = {
+    sql"DELETE FROM movies".update.run.transact(xa).void
+  }
 }
 
 object DoobieMovieAlgebra {

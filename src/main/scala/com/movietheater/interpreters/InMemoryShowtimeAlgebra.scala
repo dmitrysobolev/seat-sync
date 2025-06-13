@@ -57,6 +57,8 @@ class InMemoryShowtimeAlgebra[F[_]: Sync](ref: Ref[F, Map[ShowtimeId, Showtime]]
       }
     }
   }
+
+  def deleteAll(): F[Unit] = ref.set(Map.empty)
 }
 
 object InMemoryShowtimeAlgebra {

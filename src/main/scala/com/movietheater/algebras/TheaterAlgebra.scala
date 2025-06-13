@@ -9,6 +9,7 @@ trait TheaterAlgebra[F[_]] {
   def create(theater: Theater): F[Theater]
   def update(theater: Theater): F[Option[Theater]]
   def delete(theaterId: TheaterId): F[Boolean]
+  def deleteAll(): F[Unit]
 }
 
 object TheaterAlgebra {

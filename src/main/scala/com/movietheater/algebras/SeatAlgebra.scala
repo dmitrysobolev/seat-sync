@@ -11,6 +11,7 @@ trait SeatAlgebra[F[_]] {
   def createMany(seats: List[Seat]): F[List[Seat]]
   def update(seat: Seat): F[Option[Seat]]
   def delete(seatId: SeatId): F[Boolean]
+  def deleteAll(): F[Unit]
 }
 
 object SeatAlgebra {

@@ -46,6 +46,8 @@ class InMemoryMovieAlgebra[F[_]: Sync](ref: Ref[F, Map[MovieId, Movie]]) extends
       }
     }
   }
+
+  def deleteAll(): F[Unit] = ref.set(Map.empty)
 }
 
 object InMemoryMovieAlgebra {

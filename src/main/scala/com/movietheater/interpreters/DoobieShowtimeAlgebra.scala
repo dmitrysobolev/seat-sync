@@ -10,47 +10,6 @@ import com.movietheater.algebras.ShowtimeAlgebra
 import java.util.UUID
 import java.time.LocalDateTime
 
-class DoobieShowtimeAlgebra[F[_]: MonadCancelThrow](xa: Transactor[F]) extends ShowtimeAlgebra[F] {
-
-  import DoobieShowtimeAlgebra._
-  import DoobieInstances._
-
-  def findById(showtimeId: ShowtimeId): F[Option[Showtime]] = {
-    selectByIdQuery(showtimeId).option.transact(xa)
-  }
-
-  def findByMovie(movieId: MovieId): F[List[Showtime]] = {
-    selectByMovieQuery(movieId).to[List].transact(xa)
-  }
-
-  def findByTheater(theaterId: TheaterId): F[List[Showtime]] = {
-    selectByTheaterQuery(theaterId).to[List].transact(xa)
-  }
-
-  def findByDateRange(from: LocalDateTime, to: LocalDateTime): F[List[Showtime]] = {
-    selectByDateRangeQuery(from, to).to[List].transact(xa)
-  }
-
-  def findAll(): F[List[Showtime]] = {
-    selectAllQuery.to[List].transact(xa)
-  }
-
-  def create(showtime: Showtime): F[Showtime] = {
-    insertQuery(showtime).run.transact(xa).as(showtime)
-  }
-
-  def update(showtime: Showtime): F[Option[Showtime]] = {
-    updateQuery(showtime).run.transact(xa).map {
-      case 0 => None
-      case _ => Some(showtime)
-    }
-  }
-
-  def delete(showtimeId: ShowtimeId): F[Boolean] = {
-    deleteQuery(showtimeId).run.transact(xa).map(_ > 0)
-  }
-}
-
 object DoobieShowtimeAlgebra {
   
   import DoobieInstances._
@@ -132,6 +91,55 @@ object DoobieShowtimeAlgebra {
     sql"DELETE FROM showtimes WHERE id = ${showtimeId.value}".update
   }
 
+  private def deleteAllQuery: Update0 = {
+    sql"DELETE FROM showtimes".update
+  }
+
   def apply[F[_]: MonadCancelThrow](xa: Transactor[F]): ShowtimeAlgebra[F] = 
     new DoobieShowtimeAlgebra[F](xa)
+}
+
+class DoobieShowtimeAlgebra[F[_]: MonadCancelThrow](xa: Transactor[F]) extends ShowtimeAlgebra[F] {
+
+  import DoobieShowtimeAlgebra._
+  import DoobieInstances._
+
+  def findById(showtimeId: ShowtimeId): F[Option[Showtime]] = {
+    selectByIdQuery(showtimeId).option.transact(xa)
+  }
+
+  def findByMovie(movieId: MovieId): F[List[Showtime]] = {
+    selectByMovieQuery(movieId).to[List].transact(xa)
+  }
+
+  def findByTheater(theaterId: TheaterId): F[List[Showtime]] = {
+    selectByTheaterQuery(theaterId).to[List].transact(xa)
+  }
+
+  def findByDateRange(from: LocalDateTime, to: LocalDateTime): F[List[Showtime]] = {
+    selectByDateRangeQuery(from, to).to[List].transact(xa)
+  }
+
+  def findAll(): F[List[Showtime]] = {
+    selectAllQuery.to[List].transact(xa)
+  }
+
+  def create(showtime: Showtime): F[Showtime] = {
+    insertQuery(showtime).run.transact(xa).as(showtime)
+  }
+
+  def update(showtime: Showtime): F[Option[Showtime]] = {
+    updateQuery(showtime).run.transact(xa).map {
+      case 0 => None
+      case _ => Some(showtime)
+    }
+  }
+
+  def delete(showtimeId: ShowtimeId): F[Boolean] = {
+    deleteQuery(showtimeId).run.transact(xa).map(_ > 0)
+  }
+
+  def deleteAll(): F[Unit] = {
+    deleteAllQuery.run.transact(xa).void
+  }
 } 

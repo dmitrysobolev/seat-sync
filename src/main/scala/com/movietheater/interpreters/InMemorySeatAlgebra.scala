@@ -69,6 +69,8 @@ class InMemorySeatAlgebra[F[_]: Sync](
       }
     }
   }
+
+  def deleteAll(): F[Unit] = seatRef.set(Map.empty)
 }
 
 object InMemorySeatAlgebra {

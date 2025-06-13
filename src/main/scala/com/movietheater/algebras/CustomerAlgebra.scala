@@ -10,6 +10,7 @@ trait CustomerAlgebra[F[_]] {
   def create(customer: Customer): F[Customer]
   def update(customer: Customer): F[Option[Customer]]
   def delete(customerId: CustomerId): F[Boolean]
+  def deleteAll(): F[Unit]
 }
 
 object CustomerAlgebra {

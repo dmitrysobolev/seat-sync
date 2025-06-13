@@ -8,7 +8,7 @@ import com.movietheater.algebras._
 import java.time.LocalDateTime
 import java.util.UUID
 
-class ReservationService[F[_]: MonadThrow](
+class ReservationService[F[_]: Sync](
   movieAlgebra: MovieAlgebra[F],
   theaterAlgebra: TheaterAlgebra[F],
   showtimeAlgebra: ShowtimeAlgebra[F],
@@ -112,10 +112,38 @@ class ReservationService[F[_]: MonadThrow](
       case SeatType.VIP => basePrice * 2.0
     }
   }
+
+  // Showtime endpoints
+  def getAllShowtimes: F[List[Showtime]] = {
+    showtimeAlgebra.findByDateRange(
+      LocalDateTime.now(),
+      LocalDateTime.now().plusMonths(1)
+    )
+  }
+
+  def getShowtimesByMovie(movieId: MovieId): F[List[Showtime]] = {
+    for {
+      _ <- movieAlgebra.findById(movieId).flatMap {
+        case None => Sync[F].raiseError(DomainError.MovieNotFound(movieId))
+        case Some(_) => Sync[F].unit
+      }
+      showtimes <- showtimeAlgebra.findByMovie(movieId)
+    } yield showtimes
+  }
+
+  def getShowtimesByTheater(theaterId: TheaterId): F[List[Showtime]] = {
+    for {
+      _ <- theaterAlgebra.findById(theaterId).flatMap {
+        case None => Sync[F].raiseError(DomainError.TheaterNotFound(theaterId))
+        case Some(_) => Sync[F].unit
+      }
+      showtimes <- showtimeAlgebra.findByTheater(theaterId)
+    } yield showtimes
+  }
 }
 
 object ReservationService {
-  def apply[F[_]: MonadThrow](
+  def apply[F[_]: Sync](
     movieAlgebra: MovieAlgebra[F],
     theaterAlgebra: TheaterAlgebra[F],
     showtimeAlgebra: ShowtimeAlgebra[F],

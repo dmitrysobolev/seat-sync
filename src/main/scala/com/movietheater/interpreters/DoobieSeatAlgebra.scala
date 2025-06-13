@@ -57,6 +57,10 @@ class DoobieSeatAlgebra[F[_]: MonadCancelThrow](xa: Transactor[F], ticketAlgebra
     deleteQuery(seatId).run.transact(xa).map(_ > 0)
   }
 
+  def deleteAll(): F[Unit] = {
+    sql"DELETE FROM seats".update.run.transact(xa).void
+  }
+
   private def findByShowtimeTheater(showtimeId: ShowtimeId): F[List[Seat]] = {
     selectByShowtimeTheaterQuery(showtimeId).to[List].transact(xa)
   }
@@ -104,7 +108,7 @@ object DoobieSeatAlgebra {
   private def insertQuery(seat: Seat): Update0 = {
     sql"""
       INSERT INTO seats (id, theater_id, row_number, seat_number, seat_type) 
-      VALUES (${seat.id.value}, ${seat.theaterId.value}, ${seat.row}, ${seat.number}, ${seat.seatType})
+      VALUES (${seat.id.value}, ${seat.theaterId.value}, ${seat.row}, ${seat.number}, ${seat.seatType}::seat_type)
     """.update
   }
 
@@ -114,7 +118,7 @@ object DoobieSeatAlgebra {
       SET theater_id = ${seat.theaterId.value}, 
           row_number = ${seat.row}, 
           seat_number = ${seat.number}, 
-          seat_type = ${seat.seatType},
+          seat_type = ${seat.seatType}::seat_type,
           updated_at = CURRENT_TIMESTAMP
       WHERE id = ${seat.id.value}
     """.update

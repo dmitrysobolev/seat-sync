@@ -40,6 +40,10 @@ class DoobieTheaterAlgebra[F[_]: MonadCancelThrow](xa: Transactor[F]) extends Th
   def delete(theaterId: TheaterId): F[Boolean] = {
     deleteQuery(theaterId).run.transact(xa).map(_ > 0)
   }
+
+  def deleteAll(): F[Unit] = {
+    sql"DELETE FROM theaters".update.run.transact(xa).void
+  }
 }
 
 object DoobieTheaterAlgebra {

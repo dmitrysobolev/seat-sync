@@ -9,6 +9,7 @@ trait MovieAlgebra[F[_]] {
   def create(movie: Movie): F[Movie]
   def update(movie: Movie): F[Option[Movie]]
   def delete(movieId: MovieId): F[Boolean]
+  def deleteAll(): F[Unit]
 }
 
 object MovieAlgebra {

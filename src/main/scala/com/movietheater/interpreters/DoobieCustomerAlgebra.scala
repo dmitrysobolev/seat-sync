@@ -40,6 +40,10 @@ class DoobieCustomerAlgebra[F[_]: MonadCancelThrow](xa: Transactor[F]) extends C
   def delete(customerId: CustomerId): F[Boolean] = {
     deleteQuery(customerId).run.transact(xa).map(_ > 0)
   }
+
+  def deleteAll(): F[Unit] = {
+    sql"DELETE FROM customers".update.run.transact(xa).void
+  }
 }
 
 object DoobieCustomerAlgebra {
