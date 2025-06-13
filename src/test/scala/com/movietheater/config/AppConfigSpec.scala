@@ -29,29 +29,81 @@ class AppConfigSpec extends AnyWordSpec with Matchers {
     }
   }
 
+  "DatabaseConfig" should {
+    "be created with all required fields" in {
+      val config = DatabaseConfig(
+        driver = "org.postgresql.Driver",
+        url = "jdbc:postgresql://localhost:5432/movietheater",
+        user = "postgres",
+        password = "postgres"
+      )
+      
+      config.driver shouldBe "org.postgresql.Driver"
+      config.url shouldBe "jdbc:postgresql://localhost:5432/movietheater"
+      config.user shouldBe "postgres"
+      config.password shouldBe "postgres"
+      config.poolSize shouldBe 10 // default value
+    }
+    
+    "support custom pool size" in {
+      val config = DatabaseConfig(
+        driver = "org.postgresql.Driver",
+        url = "jdbc:postgresql://localhost:5432/movietheater",
+        user = "postgres",
+        password = "postgres",
+        poolSize = 20
+      )
+      
+      config.poolSize shouldBe 20
+    }
+  }
+
   "AppConfig" should {
-    "be created with server config" in {
+    "be created with server and database config" in {
       val serverConfig = ServerConfig("localhost", 8080)
-      val appConfig = AppConfig(serverConfig)
+      val databaseConfig = DatabaseConfig(
+        driver = "org.postgresql.Driver",
+        url = "jdbc:postgresql://localhost:5432/movietheater",
+        user = "postgres",
+        password = "postgres"
+      )
+      val appConfig = AppConfig(serverConfig, databaseConfig)
       
       appConfig.server shouldBe serverConfig
+      appConfig.database shouldBe databaseConfig
     }
     
     "support nested configuration" in {
       val appConfig = AppConfig(
-        server = ServerConfig("0.0.0.0", 3000)
+        server = ServerConfig("0.0.0.0", 3000),
+        database = DatabaseConfig(
+          driver = "org.postgresql.Driver",
+          url = "jdbc:postgresql://localhost:5432/movietheater",
+          user = "postgres",
+          password = "postgres"
+        )
       )
       
       appConfig.server.host shouldBe "0.0.0.0"
       appConfig.server.port shouldBe 3000
+      appConfig.database.driver shouldBe "org.postgresql.Driver"
     }
     
     "support copy method" in {
-      val original = AppConfig(ServerConfig("localhost", 8080))
+      val original = AppConfig(
+        ServerConfig("localhost", 8080),
+        DatabaseConfig(
+          driver = "org.postgresql.Driver",
+          url = "jdbc:postgresql://localhost:5432/movietheater",
+          user = "postgres",
+          password = "postgres"
+        )
+      )
       val modified = original.copy(server = ServerConfig("0.0.0.0", 9000))
       
       modified.server.host shouldBe "0.0.0.0"
       modified.server.port shouldBe 9000
+      modified.database shouldBe original.database
     }
   }
 } 
