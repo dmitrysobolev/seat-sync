@@ -231,6 +231,48 @@ class ReservationServiceSpec extends AsyncFreeSpec with AsyncIOSpec with Matcher
       }
     }
 
+    "calculatePrice" - {
+      "should calculate correct prices for different seat types" in {
+        val movieId = MovieId(UUID.randomUUID())
+        val theaterId = TheaterId(UUID.randomUUID())
+        val showtimeId = ShowtimeId(UUID.randomUUID())
+        val customerId = CustomerId(UUID.randomUUID())
+        val basePrice = BigDecimal("10.00")
+
+        val regularSeat = Seat(SeatId("A1-1"), "A1", 1, theaterId, SeatType.Regular)
+        val premiumSeat = Seat(SeatId("A1-2"), "A1", 2, theaterId, SeatType.Premium)
+        val vipSeat = Seat(SeatId("A1-3"), "A1", 3, theaterId, SeatType.VIP)
+
+        val showtime = Showtime(showtimeId, movieId, theaterId, LocalDateTime.now().plusHours(1), LocalDateTime.now().plusHours(3), basePrice)
+        val customer = Customer(customerId, "test@example.com", "Test", "User")
+
+        val test = for {
+          movieAlgebra <- InMemoryMovieAlgebra[IO]()
+          theaterAlgebra <- InMemoryTheaterAlgebra[IO]()
+          showtimeAlgebra <- InMemoryShowtimeAlgebra[IO](Map(showtimeId -> showtime))
+          customerAlgebra <- InMemoryCustomerAlgebra[IO](Map(customerId -> customer))
+          ticketAlgebra <- InMemoryTicketAlgebra[IO]()
+          seatAlgebra <- InMemorySeatAlgebra[IO](ticketAlgebra, Map(
+            regularSeat.id -> regularSeat,
+            premiumSeat.id -> premiumSeat,
+            vipSeat.id -> vipSeat
+          ))
+
+          service = ReservationService[IO](movieAlgebra, theaterAlgebra, showtimeAlgebra, seatAlgebra, ticketAlgebra, customerAlgebra)
+          request = CreateReservationRequest(showtimeId, List(regularSeat.id, premiumSeat.id, vipSeat.id), customerId)
+          response <- service.createReservation(request)
+        } yield response
+
+        test.asserting { response =>
+          response.tickets should have length 3
+          response.totalPrice shouldBe BigDecimal("45.00") // 10.00 + 15.00 + 20.00
+          response.tickets.find(_.seatId == regularSeat.id).get.price shouldBe basePrice
+          response.tickets.find(_.seatId == premiumSeat.id).get.price shouldBe basePrice * 1.5
+          response.tickets.find(_.seatId == vipSeat.id).get.price shouldBe basePrice * 2.0
+        }
+      }
+    }
+
     "getCustomerTickets" - {
       "should return customer tickets" in {
         val customerId = CustomerId(UUID.randomUUID())
@@ -311,6 +353,135 @@ class ReservationServiceSpec extends AsyncFreeSpec with AsyncIOSpec with Matcher
         test.asserting { response =>
           response.showtimeId shouldBe showtimeId
           response.availableSeats should have length 2
+        }
+      }
+    }
+
+    "Showtime endpoints" - {
+      "getAllShowtimes" - {
+        "should return all showtimes within the next month" in {
+          val movieId = MovieId(UUID.randomUUID())
+          val theaterId = TheaterId(UUID.randomUUID())
+          val showtimeId1 = ShowtimeId(UUID.randomUUID())
+          val showtimeId2 = ShowtimeId(UUID.randomUUID())
+          val now = LocalDateTime.now()
+          val showtime1 = Showtime(showtimeId1, movieId, theaterId, now.plusHours(1), now.plusHours(3), BigDecimal("10.00"))
+          val showtime2 = Showtime(showtimeId2, movieId, theaterId, now.plusDays(15), now.plusDays(15).plusHours(2), BigDecimal("12.00"))
+
+          val test = for {
+            movieAlgebra <- InMemoryMovieAlgebra[IO]()
+            theaterAlgebra <- InMemoryTheaterAlgebra[IO]()
+            showtimeAlgebra <- InMemoryShowtimeAlgebra[IO](Map(showtimeId1 -> showtime1, showtimeId2 -> showtime2))
+            customerAlgebra <- InMemoryCustomerAlgebra[IO]()
+            ticketAlgebra <- InMemoryTicketAlgebra[IO]()
+            seatAlgebra <- InMemorySeatAlgebra[IO](ticketAlgebra)
+
+            service = ReservationService[IO](movieAlgebra, theaterAlgebra, showtimeAlgebra, seatAlgebra, ticketAlgebra, customerAlgebra)
+            result <- service.getAllShowtimes
+          } yield result
+
+          test.asserting { showtimes =>
+            showtimes should have length 2
+            showtimes should contain theSameElementsAs List(showtime1, showtime2)
+          }
+        }
+      }
+
+      "getShowtimesByMovie" - {
+        "should return showtimes for a given movie" in {
+          val movieId = MovieId(UUID.randomUUID())
+          val theaterId = TheaterId(UUID.randomUUID())
+          val showtimeId1 = ShowtimeId(UUID.randomUUID())
+          val showtimeId2 = ShowtimeId(UUID.randomUUID())
+          val now = LocalDateTime.now()
+          val showtime1 = Showtime(showtimeId1, movieId, theaterId, now.plusHours(1), now.plusHours(3), BigDecimal("10.00"))
+          val showtime2 = Showtime(showtimeId2, movieId, theaterId, now.plusDays(1), now.plusDays(1).plusHours(2), BigDecimal("12.00"))
+
+          val test = for {
+            movieAlgebra <- InMemoryMovieAlgebra[IO](Map(movieId -> Movie(movieId, "Test Movie", "A test movie", 120, "PG")))
+            theaterAlgebra <- InMemoryTheaterAlgebra[IO]()
+            showtimeAlgebra <- InMemoryShowtimeAlgebra[IO](Map(showtimeId1 -> showtime1, showtimeId2 -> showtime2))
+            customerAlgebra <- InMemoryCustomerAlgebra[IO]()
+            ticketAlgebra <- InMemoryTicketAlgebra[IO]()
+            seatAlgebra <- InMemorySeatAlgebra[IO](ticketAlgebra)
+
+            service = ReservationService[IO](movieAlgebra, theaterAlgebra, showtimeAlgebra, seatAlgebra, ticketAlgebra, customerAlgebra)
+            result <- service.getShowtimesByMovie(movieId)
+          } yield result
+
+          test.asserting { showtimes =>
+            showtimes should have length 2
+            showtimes should contain theSameElementsAs List(showtime1, showtime2)
+          }
+        }
+
+        "should fail when movie not found" in {
+          val movieId = MovieId(UUID.randomUUID())
+
+          val test = for {
+            movieAlgebra <- InMemoryMovieAlgebra[IO]()
+            theaterAlgebra <- InMemoryTheaterAlgebra[IO]()
+            showtimeAlgebra <- InMemoryShowtimeAlgebra[IO]()
+            customerAlgebra <- InMemoryCustomerAlgebra[IO]()
+            ticketAlgebra <- InMemoryTicketAlgebra[IO]()
+            seatAlgebra <- InMemorySeatAlgebra[IO](ticketAlgebra)
+
+            service = ReservationService[IO](movieAlgebra, theaterAlgebra, showtimeAlgebra, seatAlgebra, ticketAlgebra, customerAlgebra)
+            result <- service.getShowtimesByMovie(movieId).attempt
+          } yield result
+
+          test.asserting { result =>
+            result.left.toOption.get shouldBe a[DomainError.MovieNotFound]
+          }
+        }
+      }
+
+      "getShowtimesByTheater" - {
+        "should return showtimes for a given theater" in {
+          val movieId = MovieId(UUID.randomUUID())
+          val theaterId = TheaterId(UUID.randomUUID())
+          val showtimeId1 = ShowtimeId(UUID.randomUUID())
+          val showtimeId2 = ShowtimeId(UUID.randomUUID())
+          val now = LocalDateTime.now()
+          val showtime1 = Showtime(showtimeId1, movieId, theaterId, now.plusHours(1), now.plusHours(3), BigDecimal("10.00"))
+          val showtime2 = Showtime(showtimeId2, movieId, theaterId, now.plusDays(1), now.plusDays(1).plusHours(2), BigDecimal("12.00"))
+
+          val test = for {
+            movieAlgebra <- InMemoryMovieAlgebra[IO]()
+            theaterAlgebra <- InMemoryTheaterAlgebra[IO](Map(theaterId -> Theater(theaterId, "Test Theater", "Test Location", 100)))
+            showtimeAlgebra <- InMemoryShowtimeAlgebra[IO](Map(showtimeId1 -> showtime1, showtimeId2 -> showtime2))
+            customerAlgebra <- InMemoryCustomerAlgebra[IO]()
+            ticketAlgebra <- InMemoryTicketAlgebra[IO]()
+            seatAlgebra <- InMemorySeatAlgebra[IO](ticketAlgebra)
+
+            service = ReservationService[IO](movieAlgebra, theaterAlgebra, showtimeAlgebra, seatAlgebra, ticketAlgebra, customerAlgebra)
+            result <- service.getShowtimesByTheater(theaterId)
+          } yield result
+
+          test.asserting { showtimes =>
+            showtimes should have length 2
+            showtimes should contain theSameElementsAs List(showtime1, showtime2)
+          }
+        }
+
+        "should fail when theater not found" in {
+          val theaterId = TheaterId(UUID.randomUUID())
+
+          val test = for {
+            movieAlgebra <- InMemoryMovieAlgebra[IO]()
+            theaterAlgebra <- InMemoryTheaterAlgebra[IO]()
+            showtimeAlgebra <- InMemoryShowtimeAlgebra[IO]()
+            customerAlgebra <- InMemoryCustomerAlgebra[IO]()
+            ticketAlgebra <- InMemoryTicketAlgebra[IO]()
+            seatAlgebra <- InMemorySeatAlgebra[IO](ticketAlgebra)
+
+            service = ReservationService[IO](movieAlgebra, theaterAlgebra, showtimeAlgebra, seatAlgebra, ticketAlgebra, customerAlgebra)
+            result <- service.getShowtimesByTheater(theaterId).attempt
+          } yield result
+
+          test.asserting { result =>
+            result.left.toOption.get shouldBe a[DomainError.TheaterNotFound]
+          }
         }
       }
     }
