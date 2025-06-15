@@ -15,18 +15,21 @@ class InMemorySeatAlgebraSpec extends AsyncFreeSpec with AsyncIOSpec with Matche
       "should return available seats when no tickets exist" in {
         val theaterId = TheaterId(UUID.randomUUID())
         val showtimeId = ShowtimeId(UUID.randomUUID())
-        val seat1 = Seat(SeatId("A1-1"), "A1", 1, theaterId, SeatType.Regular)
-        val seat2 = Seat(SeatId("A1-2"), "A1", 2, theaterId, SeatType.Premium)
-        val seats = Map(seat1.id -> seat1, seat2.id -> seat2)
-        
+        val seatId1 = SeatId("A1-1")
+        val seatId2 = SeatId("A1-2")
+
+        val seat1 = Seat(seatId1, "A1", 1, theaterId, SeatType.Regular)
+        val seat2 = Seat(seatId2, "A1", 2, theaterId, SeatType.Regular)
+
         val test = for {
           ticketAlgebra <- InMemoryTicketAlgebra[IO]()
-          algebra <- InMemorySeatAlgebra[IO](ticketAlgebra, seats)
-          result <- algebra.findAvailableForShowtime(showtimeId)
-        } yield result
-        
-        test.asserting { result =>
-          result should contain theSameElementsAs List(seat1, seat2)
+          seatAlgebra <- InMemorySeatAlgebra[IO](ticketAlgebra, Map(seatId1 -> seat1, seatId2 -> seat2))
+          availableSeats <- seatAlgebra.findAvailableForShowtime(showtimeId)
+        } yield availableSeats
+
+        test.asserting { seats =>
+          seats should have length 2
+          seats should contain theSameElementsAs List(seat1, seat2)
         }
       }
       
@@ -34,20 +37,30 @@ class InMemorySeatAlgebraSpec extends AsyncFreeSpec with AsyncIOSpec with Matche
         val theaterId = TheaterId(UUID.randomUUID())
         val showtimeId = ShowtimeId(UUID.randomUUID())
         val customerId = CustomerId(UUID.randomUUID())
-        val seat1 = Seat(SeatId("A1-1"), "A1", 1, theaterId, SeatType.Regular)
-        val seat2 = Seat(SeatId("A1-2"), "A1", 2, theaterId, SeatType.Premium)
-        val seats = Map(seat1.id -> seat1, seat2.id -> seat2)
-        
-        val ticket = Ticket(TicketId(UUID.randomUUID()), showtimeId, seat1.id, customerId, BigDecimal("10.00"), TicketStatus.Reserved, LocalDateTime.now())
-        
+        val seatId1 = SeatId("A1-1")
+        val seatId2 = SeatId("A1-2")
+
+        val seat1 = Seat(seatId1, "A1", 1, theaterId, SeatType.Regular)
+        val seat2 = Seat(seatId2, "A1", 2, theaterId, SeatType.Regular)
+        val ticket = Ticket(
+          TicketId(UUID.randomUUID()),
+          showtimeId,
+          seatId1,
+          customerId,
+          BigDecimal("10.00"),
+          TicketStatus.Reserved,
+          java.time.LocalDateTime.now()
+        )
+
         val test = for {
           ticketAlgebra <- InMemoryTicketAlgebra[IO](Map(ticket.id -> ticket))
-          algebra <- InMemorySeatAlgebra[IO](ticketAlgebra, seats)
-          result <- algebra.findAvailableForShowtime(showtimeId)
-        } yield result
-        
-        test.asserting { result =>
-          result shouldBe List(seat2)
+          seatAlgebra <- InMemorySeatAlgebra[IO](ticketAlgebra, Map(seatId1 -> seat1, seatId2 -> seat2))
+          availableSeats <- seatAlgebra.findAvailableForShowtime(showtimeId)
+        } yield availableSeats
+
+        test.asserting { seats =>
+          seats should have length 1
+          seats should contain only seat2
         }
       }
       
@@ -56,26 +69,31 @@ class InMemorySeatAlgebraSpec extends AsyncFreeSpec with AsyncIOSpec with Matche
         
         val test = for {
           ticketAlgebra <- InMemoryTicketAlgebra[IO]()
-          algebra <- InMemorySeatAlgebra[IO](ticketAlgebra)
-          result <- algebra.findAvailableForShowtime(showtimeId)
-        } yield result
+          seatAlgebra <- InMemorySeatAlgebra[IO](ticketAlgebra)
+          availableSeats <- seatAlgebra.findAvailableForShowtime(showtimeId)
+        } yield availableSeats
         
-        test.asserting(_ shouldBe List.empty)
+        test.asserting { seats =>
+          seats shouldBe empty
+        }
       }
     }
     
     "findById" - {
       "should return seat when it exists" in {
+        val theaterId = TheaterId(UUID.randomUUID())
         val seatId = SeatId("A1-1")
-        val seat = Seat(seatId, "A1", 1, TheaterId(UUID.randomUUID()), SeatType.Regular)
+        val seat = Seat(seatId, "A1", 1, theaterId, SeatType.Regular)
         
         val test = for {
           ticketAlgebra <- InMemoryTicketAlgebra[IO]()
-          algebra <- InMemorySeatAlgebra[IO](ticketAlgebra, Map(seatId -> seat))
-          result <- algebra.findById(seatId)
+          seatAlgebra <- InMemorySeatAlgebra[IO](ticketAlgebra, Map(seatId -> seat))
+          result <- seatAlgebra.findById(seatId)
         } yield result
         
-        test.asserting(_ shouldBe Some(seat))
+        test.asserting { result =>
+          result shouldBe Some(seat)
+        }
       }
       
       "should return None when seat doesn't exist" in {
@@ -83,11 +101,13 @@ class InMemorySeatAlgebraSpec extends AsyncFreeSpec with AsyncIOSpec with Matche
         
         val test = for {
           ticketAlgebra <- InMemoryTicketAlgebra[IO]()
-          algebra <- InMemorySeatAlgebra[IO](ticketAlgebra)
-          result <- algebra.findById(seatId)
+          seatAlgebra <- InMemorySeatAlgebra[IO](ticketAlgebra)
+          result <- seatAlgebra.findById(seatId)
         } yield result
         
-        test.asserting(_ shouldBe None)
+        test.asserting { result =>
+          result shouldBe None
+        }
       }
     }
     
@@ -95,19 +115,27 @@ class InMemorySeatAlgebraSpec extends AsyncFreeSpec with AsyncIOSpec with Matche
       "should return seats for specific theater" in {
         val theaterId1 = TheaterId(UUID.randomUUID())
         val theaterId2 = TheaterId(UUID.randomUUID())
-        val seat1 = Seat(SeatId("A1-1"), "A1", 1, theaterId1, SeatType.Regular)
-        val seat2 = Seat(SeatId("A1-2"), "A1", 2, theaterId1, SeatType.Premium)
-        val seat3 = Seat(SeatId("B1-1"), "B1", 1, theaterId2, SeatType.VIP)
-        val seats = Map(seat1.id -> seat1, seat2.id -> seat2, seat3.id -> seat3)
-        
+        val seatId1 = SeatId("A1-1")
+        val seatId2 = SeatId("A1-2")
+        val seatId3 = SeatId("B1-1")
+
+        val seat1 = Seat(seatId1, "A1", 1, theaterId1, SeatType.Regular)
+        val seat2 = Seat(seatId2, "A1", 2, theaterId1, SeatType.Regular)
+        val seat3 = Seat(seatId3, "B1", 1, theaterId2, SeatType.Regular)
+
         val test = for {
           ticketAlgebra <- InMemoryTicketAlgebra[IO]()
-          algebra <- InMemorySeatAlgebra[IO](ticketAlgebra, seats)
-          result <- algebra.findByTheater(theaterId1)
+          seatAlgebra <- InMemorySeatAlgebra[IO](ticketAlgebra, Map(
+            seatId1 -> seat1,
+            seatId2 -> seat2,
+            seatId3 -> seat3
+          ))
+          result <- seatAlgebra.findByTheater(theaterId1)
         } yield result
         
-        test.asserting { result =>
-          result should contain theSameElementsAs List(seat1, seat2)
+        test.asserting { seats =>
+          seats should have length 2
+          seats should contain theSameElementsAs List(seat1, seat2)
         }
       }
       
@@ -116,47 +144,115 @@ class InMemorySeatAlgebraSpec extends AsyncFreeSpec with AsyncIOSpec with Matche
         
         val test = for {
           ticketAlgebra <- InMemoryTicketAlgebra[IO]()
-          algebra <- InMemorySeatAlgebra[IO](ticketAlgebra)
-          result <- algebra.findByTheater(theaterId)
+          seatAlgebra <- InMemorySeatAlgebra[IO](ticketAlgebra)
+          result <- seatAlgebra.findByTheater(theaterId)
         } yield result
         
-        test.asserting(_ shouldBe List.empty)
+        test.asserting { seats =>
+          seats shouldBe empty
+        }
       }
     }
     
     "create" - {
       "should create and return new seat" in {
-        val seat = Seat(SeatId("A1-1"), "A1", 1, TheaterId(UUID.randomUUID()), SeatType.Regular)
+        val theaterId = TheaterId(UUID.randomUUID())
+        val seatId = SeatId("A1-1")
+        val seat = Seat(seatId, "A1", 1, theaterId, SeatType.Regular)
         
         val test = for {
           ticketAlgebra <- InMemoryTicketAlgebra[IO]()
-          algebra <- InMemorySeatAlgebra[IO](ticketAlgebra)
-          result <- algebra.create(seat)
-          retrieved <- algebra.findById(seat.id)
-        } yield (result, retrieved)
+          seatAlgebra <- InMemorySeatAlgebra[IO](ticketAlgebra)
+          created <- seatAlgebra.create(seat)
+          allSeats <- seatAlgebra.findByTheater(theaterId)
+        } yield (created, allSeats)
         
-        test.asserting { case (created, retrieved) =>
+        test.asserting { case (created, allSeats) =>
           created shouldBe seat
-          retrieved shouldBe Some(seat)
+          allSeats should have length 1
+          allSeats should contain only seat
+        }
+      }
+    }
+    
+    "createMany" - {
+      "should create multiple seats" in {
+        val theaterId = TheaterId(UUID.randomUUID())
+        val seatId1 = SeatId("A1-1")
+        val seatId2 = SeatId("A1-2")
+        val seat1 = Seat(seatId1, "A1", 1, theaterId, SeatType.Regular)
+        val seat2 = Seat(seatId2, "A1", 2, theaterId, SeatType.Regular)
+
+        val test = for {
+          ticketAlgebra <- InMemoryTicketAlgebra[IO]()
+          seatAlgebra <- InMemorySeatAlgebra[IO](ticketAlgebra)
+          created <- seatAlgebra.createMany(List(seat1, seat2))
+          allSeats <- seatAlgebra.findByTheater(theaterId)
+        } yield (created, allSeats)
+
+        test.asserting { case (created, allSeats) =>
+          created should have length 2
+          created should contain theSameElementsAs List(seat1, seat2)
+          allSeats should have length 2
+          allSeats should contain theSameElementsAs List(seat1, seat2)
+        }
+      }
+    }
+    
+    "update" - {
+      "should update existing seat" in {
+        val theaterId = TheaterId(UUID.randomUUID())
+        val seatId = SeatId("A1-1")
+        val originalSeat = Seat(seatId, "A1", 1, theaterId, SeatType.Regular)
+        val updatedSeat = originalSeat.copy(seatType = SeatType.Premium)
+
+        val test = for {
+          ticketAlgebra <- InMemoryTicketAlgebra[IO]()
+          seatAlgebra <- InMemorySeatAlgebra[IO](ticketAlgebra, Map(seatId -> originalSeat))
+          result <- seatAlgebra.update(updatedSeat)
+          allSeats <- seatAlgebra.findByTheater(theaterId)
+        } yield (result, allSeats)
+
+        test.asserting { case (result, allSeats) =>
+          result shouldBe Some(updatedSeat)
+          allSeats should have length 1
+          allSeats should contain only updatedSeat
+        }
+      }
+      
+      "should return None when seat doesn't exist" in {
+        val theaterId = TheaterId(UUID.randomUUID())
+        val seatId = SeatId("A1-1")
+        val seat = Seat(seatId, "A1", 1, theaterId, SeatType.Regular)
+
+        val test = for {
+          ticketAlgebra <- InMemoryTicketAlgebra[IO]()
+          seatAlgebra <- InMemorySeatAlgebra[IO](ticketAlgebra)
+          result <- seatAlgebra.update(seat)
+        } yield result
+
+        test.asserting { result =>
+          result shouldBe None
         }
       }
     }
     
     "delete" - {
       "should delete existing seat" in {
+        val theaterId = TheaterId(UUID.randomUUID())
         val seatId = SeatId("A1-1")
-        val seat = Seat(seatId, "A1", 1, TheaterId(UUID.randomUUID()), SeatType.Regular)
+        val seat = Seat(seatId, "A1", 1, theaterId, SeatType.Regular)
         
         val test = for {
           ticketAlgebra <- InMemoryTicketAlgebra[IO]()
-          algebra <- InMemorySeatAlgebra[IO](ticketAlgebra, Map(seatId -> seat))
-          result <- algebra.delete(seatId)
-          retrieved <- algebra.findById(seatId)
-        } yield (result, retrieved)
+          seatAlgebra <- InMemorySeatAlgebra[IO](ticketAlgebra, Map(seatId -> seat))
+          result <- seatAlgebra.delete(seatId)
+          allSeats <- seatAlgebra.findByTheater(theaterId)
+        } yield (result, allSeats)
         
-        test.asserting { case (deleted, retrieved) =>
-          deleted shouldBe true
-          retrieved shouldBe None
+        test.asserting { case (result, allSeats) =>
+          result shouldBe true
+          allSeats shouldBe empty
         }
       }
       
@@ -165,11 +261,37 @@ class InMemorySeatAlgebraSpec extends AsyncFreeSpec with AsyncIOSpec with Matche
         
         val test = for {
           ticketAlgebra <- InMemoryTicketAlgebra[IO]()
-          algebra <- InMemorySeatAlgebra[IO](ticketAlgebra)
-          result <- algebra.delete(seatId)
+          seatAlgebra <- InMemorySeatAlgebra[IO](ticketAlgebra)
+          result <- seatAlgebra.delete(seatId)
         } yield result
         
-        test.asserting(_ shouldBe false)
+        test.asserting { result =>
+          result shouldBe false
+        }
+      }
+    }
+    
+    "deleteAll" - {
+      "should delete all seats" in {
+        val theaterId = TheaterId(UUID.randomUUID())
+        val seatId1 = SeatId("A1-1")
+        val seatId2 = SeatId("A1-2")
+        val seat1 = Seat(seatId1, "A1", 1, theaterId, SeatType.Regular)
+        val seat2 = Seat(seatId2, "A1", 2, theaterId, SeatType.Regular)
+
+        val test = for {
+          ticketAlgebra <- InMemoryTicketAlgebra[IO]()
+          seatAlgebra <- InMemorySeatAlgebra[IO](ticketAlgebra, Map(
+            seatId1 -> seat1,
+            seatId2 -> seat2
+          ))
+          _ <- seatAlgebra.deleteAll()
+          allSeats <- seatAlgebra.findByTheater(theaterId)
+        } yield allSeats
+
+        test.asserting { seats =>
+          seats shouldBe empty
+        }
       }
     }
   }
