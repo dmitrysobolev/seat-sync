@@ -7,11 +7,44 @@ import doobie.util.update.Update0
 import doobie.postgres.implicits._
 import com.movietheater.domain.{Theater, TheaterId}
 import com.movietheater.db.DoobieInstances._
+import doobie.util.{Get, Put}
+import java.time.LocalDateTime
 
 class TheaterRepository(xa: doobie.Transactor[IO]) {
+  // Doobie typeclass instances
+  implicit val get: Get[Theater] = (
+    Get[TheaterId].map(_.asInstanceOf[TheaterId]) <*>
+      Get[String] <*>
+      Get[String] <*>
+      Get[Int] <*>
+      Get[LocalDateTime] <*>
+      Get[LocalDateTime]
+    ).map {
+    case (id, name, address, totalSeats, createdAt, updatedAt) =>
+      Theater(id, name, address, totalSeats, createdAt, updatedAt)
+  }
+
+  implicit val put: Put[Theater] = (
+    Put[TheaterId] <*>
+      Put[String] <*>
+      Put[String] <*>
+      Put[Int] <*>
+      Put[LocalDateTime] <*>
+      Put[LocalDateTime]
+    ).contramap { theater =>
+    (
+      theater.id,
+      theater.name,
+      theater.address,
+      theater.totalSeats,
+      theater.createdAt,
+      theater.updatedAt
+    )
+  }
+
   def findById(theaterId: TheaterId): IO[Option[Theater]] = {
     sql"""
-      SELECT id, name, location, total_seats
+      SELECT id, name, address, total_seats, created_at, updated_at
       FROM theaters
       WHERE id = $theaterId
     """.query[Theater].option.transact(xa)
@@ -19,15 +52,15 @@ class TheaterRepository(xa: doobie.Transactor[IO]) {
 
   def findAll: IO[List[Theater]] = {
     sql"""
-      SELECT id, name, location, total_seats
+      SELECT id, name, address, total_seats, created_at, updated_at
       FROM theaters
     """.query[Theater].stream.compile.toList.transact(xa)
   }
 
   def create(theater: Theater): IO[Theater] = {
     sql"""
-      INSERT INTO theaters (id, name, location, total_seats)
-      VALUES (${theater.id}, ${theater.name}, ${theater.location}, ${theater.totalSeats})
+      INSERT INTO theaters (id, name, address, total_seats, created_at, updated_at)
+      VALUES (${theater.id}, ${theater.name}, ${theater.address}, ${theater.totalSeats}, ${theater.createdAt}, ${theater.updatedAt})
     """.update.run.transact(xa).map(_ => theater)
   }
 
@@ -35,8 +68,9 @@ class TheaterRepository(xa: doobie.Transactor[IO]) {
     sql"""
       UPDATE theaters
       SET name = ${theater.name},
-          location = ${theater.location},
-          total_seats = ${theater.totalSeats}
+          address = ${theater.address},
+          total_seats = ${theater.totalSeats},
+          updated_at = ${theater.updatedAt}
       WHERE id = ${theater.id}
     """.update.run.transact(xa).map(_ => theater)
   }

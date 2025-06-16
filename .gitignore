@@ -23,6 +23,8 @@ out/
 .vscode/
 .metals/
 .bloop/
+.bsp/
+.claude/
 
 # Eclipse
 .project

@@ -13,14 +13,14 @@ class InMemorySeatAlgebra[F[_]: Sync](
   ticketAlgebra: TicketAlgebra[F]
 ) extends SeatAlgebra[F] {
 
-  private val seats = new TrieMap[UUID, Seat]
+  // Using Ref instead of TrieMap for consistency
 
   def findById(seatId: SeatId): F[Option[Seat]] = {
     seatRef.get.map(_.get(seatId))
   }
 
   def findByTheater(theaterId: TheaterId): F[List[Seat]] = {
-    seatRef.get.map(_.values.filter(_.auditoriumId == theaterId).toList)
+    seatRef.get.map(_.values.filter(_.theaterId == theaterId).toList)
   }
 
   def findAvailableForShowtime(showtimeId: ShowtimeId): F[List[Seat]] = {
@@ -77,32 +77,28 @@ class InMemorySeatAlgebra[F[_]: Sync](
   def deleteAll(): F[Unit] = seatRef.set(Map.empty)
 
   override def getSeatsByShowtime(showtimeId: ShowtimeId): F[List[Seat]] =
-    seats.values.filter(_.showtimeId == showtimeId).toList.pure[F]
+    // Since Seat no longer has showtimeId, this method should be removed or reimplemented
+    Sync[F].raiseError(new NotImplementedError("getSeatsByShowtime not supported - Seat no longer has showtimeId"))
 
   override def getSeatByShowtimeAndPosition(showtimeId: ShowtimeId, rowNumber: RowNumber, seatNumber: SeatNumber): F[Option[Seat]] =
-    seats.values.find(seat => 
-      seat.showtimeId == showtimeId && 
-      seat.rowNumber == rowNumber && 
-      seat.seatNumber == seatNumber
-    ).pure[F]
+    // Since Seat no longer has showtimeId, this method should be removed or reimplemented
+    Sync[F].raiseError(new NotImplementedError("getSeatByShowtimeAndPosition not supported - Seat no longer has showtimeId"))
 
   override def createSeat(seat: Seat): F[Seat] =
-    seats.put(seat.id, seat).as(seat)
+    create(seat)
 
-  override def createSeats(seats: List[Seat]): F[List[Seat]] =
-    seats.traverse(createSeat)
+  override def createSeats(seatList: List[Seat]): F[List[Seat]] =
+    createMany(seatList)
 
   override def updateSeat(seat: Seat): F[Seat] =
-    seats.put(seat.id, seat).as(seat)
+    update(seat).map(_.getOrElse(seat))
 
   override def deleteSeat(seat: Seat): F[Unit] =
-    seats.remove(seat.id).void
+    delete(seat.id).void
 
   override def deleteSeatsByShowtime(showtimeId: ShowtimeId): F[Unit] =
-    seats.values
-      .filter(_.showtimeId == showtimeId)
-      .foreach(seat => seats.remove(seat.id))
-      .pure[F]
+    // Since Seat no longer has showtimeId, this method should be removed or reimplemented
+    Sync[F].raiseError(new NotImplementedError("deleteSeatsByShowtime not supported - Seat no longer has showtimeId"))
 }
 
 object InMemorySeatAlgebra {

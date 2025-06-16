@@ -33,31 +33,47 @@ object DoobieInstances {
   implicit val auditoriumIdGet: Get[AuditoriumId] = Get[UUID].map(AuditoriumId.apply)
   implicit val auditoriumIdPut: Put[AuditoriumId] = Put[UUID].contramap(_.value)
 
+  // Value objects
+  implicit val rowNumberGet: Get[RowNumber] = Get[String].map(str => RowNumber(str.head.toUpper))
+  implicit val rowNumberPut: Put[RowNumber] = Put[String].contramap(_.toString)
+
+  implicit val seatNumberGet: Get[SeatNumber] = Get[Int].map(SeatNumber.apply)
+  implicit val seatNumberPut: Put[SeatNumber] = Put[Int].contramap(_.value)
+
   // Enum instances
   implicit val seatTypeGet: Get[SeatType] = Get[String].map {
-    case "Regular" => SeatType.Regular
-    case "Premium" => SeatType.Premium
-    case "VIP" => SeatType.VIP
+    case "standard" => SeatType.Standard
+    case "premium" => SeatType.Premium
+    case "vip" => SeatType.VIP
     case invalid => throw new IllegalArgumentException(s"Invalid seat type: $invalid")
   }
 
   implicit val seatTypePut: Put[SeatType] = Put[String].contramap {
-    case SeatType.Regular => "Regular"
-    case SeatType.Premium => "Premium"
-    case SeatType.VIP => "VIP"
+    case SeatType.Standard => "standard"
+    case SeatType.Premium => "premium"
+    case SeatType.VIP => "vip"
   }
 
+  implicit val seatStatusGet: Get[SeatStatus] = Get[String].map {
+    case "available" => SeatStatus.Available
+    case "reserved" => SeatStatus.Reserved
+    case "sold" => SeatStatus.Sold
+    case invalid => throw new IllegalArgumentException(s"Invalid seat status: $invalid")
+  }
+
+  implicit val seatStatusPut: Put[SeatStatus] = Put[String].contramap(_.toString)
+
   implicit val ticketStatusGet: Get[TicketStatus] = Get[String].map {
-    case "Reserved" => TicketStatus.Reserved
-    case "Purchased" => TicketStatus.Purchased
-    case "Cancelled" => TicketStatus.Cancelled
+    case "reserved" => TicketStatus.Reserved
+    case "purchased" => TicketStatus.Purchased
+    case "cancelled" => TicketStatus.Cancelled
     case invalid => throw new IllegalArgumentException(s"Invalid ticket status: $invalid")
   }
 
   implicit val ticketStatusPut: Put[TicketStatus] = Put[String].contramap {
-    case TicketStatus.Reserved => "Reserved"
-    case TicketStatus.Purchased => "Purchased"
-    case TicketStatus.Cancelled => "Cancelled"
+    case TicketStatus.Reserved => "reserved"
+    case TicketStatus.Purchased => "purchased"
+    case TicketStatus.Cancelled => "cancelled"
   }
 
   // Money instance

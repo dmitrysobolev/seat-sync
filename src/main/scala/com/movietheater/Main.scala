@@ -1,21 +1,23 @@
 package com.movietheater
 
-import cats.effect.{IO, IOApp}
+import cats.effect.{IO, IOApp, ExitCode, Async, Sync, Resource}
+import cats.implicits._
 import com.movietheater.algebras._
-import com.movietheater.config.AppConfig
-import com.movietheater.http.HttpRoutes
+import com.movietheater.config.{AppConfig, ServerConfig}
+import com.movietheater.db.Database
 import com.movietheater.interpreters.doobie._
 import com.movietheater.interpreters.inmemory._
 import com.movietheater.services.{ReservationService, SeatStatusSyncService}
+import com.movietheater.http.routes.ReservationRoutes
 import doobie.util.transactor.Transactor
 import org.http4s.ember.server.EmberServerBuilder
 import org.http4s.server.middleware.{Logger, RequestId}
 import pureconfig.ConfigSource
-import pureconfig.generic.auto._
+import pureconfig.generic.derivation.default._
 import com.comcast.ip4s._
 import com.movietheater.domain._
 import java.util.UUID
-import java.time.LocalDateTime
+import java.time.{LocalDateTime, Duration}
 
 object Main extends IOApp {
 
@@ -108,26 +110,26 @@ object Main extends IOApp {
     customerAlgebra: com.movietheater.algebras.CustomerAlgebra[F]
   ): Resource[F, org.http4s.server.Server] = {
     for {
-      // Create service
+      seatStatusSyncService <- Resource.pure(SeatStatusSyncService[F](
+        showtimeAlgebra,
+        ticketAlgebra,
+      ))
       reservationService <- Resource.pure(ReservationService[F](
         movieAlgebra,
         theaterAlgebra,
         showtimeAlgebra,
         seatAlgebra,
         ticketAlgebra,
-        customerAlgebra
+        customerAlgebra,
+        seatStatusSyncService
       ))
 
-      // Create routes
       reservationRoutes <- Resource.pure(ReservationRoutes[F](reservationService))
 
-      // Combine all routes
       httpApp <- Resource.pure(reservationRoutes.routes.orNotFound)
 
-      // Add logging middleware
       finalApp <- Resource.pure(Logger.httpApp(logHeaders = true, logBody = true)(httpApp))
 
-      // Create server
       server <- EmberServerBuilder.default[F]
         .withHost(Host.fromString(serverConfig.host).getOrElse(ipv4"0.0.0.0"))
         .withPort(Port.fromInt(serverConfig.port).getOrElse(port"8080"))
@@ -187,24 +189,21 @@ object Main extends IOApp {
     Map[CustomerId, Customer]
   )] = {
     Sync[F].delay {
-      // Sample movies
+      val now = LocalDateTime.now()
       val movie1Id = MovieId(UUID.randomUUID())
       val movie2Id = MovieId(UUID.randomUUID())
       val movies = Map(
-        movie1Id -> Movie(movie1Id, "The Matrix", "A computer programmer discovers reality is a simulation", 136, "R"),
-        movie2Id -> Movie(movie2Id, "Inception", "A thief enters people's dreams to steal secrets", 148, "PG-13")
+        movie1Id -> Movie(movie1Id, "The Matrix", "A computer programmer discovers reality is a simulation", Duration.ofMinutes(136), "R", now, now),
+        movie2Id -> Movie(movie2Id, "Inception", "A thief enters people's dreams to steal secrets", Duration.ofMinutes(148), "PG-13", now, now)
       )
 
-      // Sample theaters
       val theater1Id = TheaterId(UUID.randomUUID())
       val theater2Id = TheaterId(UUID.randomUUID())
-      val now = LocalDateTime.now()
       val theaters = Map(
-        theater1Id -> Theater(theater1Id, "Cinema One", "Downtown Mall", now, now),
-        theater2Id -> Theater(theater2Id, "Grand Theater", "Uptown Plaza", now, now)
+        theater1Id -> Theater(theater1Id, "Cinema One", "Downtown Mall", 100, now, now),
+        theater2Id -> Theater(theater2Id, "Grand Theater", "Uptown Plaza", 200, now, now)
       )
 
-      // Sample auditoriums
       val auditorium1Id = AuditoriumId(UUID.randomUUID())
       val auditorium2Id = AuditoriumId(UUID.randomUUID())
       val auditorium3Id = AuditoriumId(UUID.randomUUID())
@@ -214,28 +213,26 @@ object Main extends IOApp {
         auditorium3Id -> Auditorium(auditorium3Id, theater2Id, "Main Auditorium", now, now)
       )
 
-      // Sample seats - fix constructor parameters
-      val seats1 = (1 to 10).flatMap { row =>
-        (1 to 10).map { number =>
-          val seatId = SeatId(s"A$row-$number")
-          Seat(seatId, auditorium1Id, s"A$row", number, now, now)
+      val seats1 = ('A' to 'P').flatMap { row =>
+        (1 to 25).map { number =>
+          val seatId = SeatId(s"$row$number")
+          Seat(seatId, theater1Id, auditorium1Id, RowNumber(row), SeatNumber(number), now, now)
         }
       }.toList
-      val seats2 = (1 to 10).flatMap { row =>
-        (1 to 10).map { number =>
-          val seatId = SeatId(s"B$row-$number")
-          Seat(seatId, auditorium2Id, s"B$row", number, now, now)
+      val seats2 = ('A' to 'P').flatMap { row =>
+        (1 to 25).map { number =>
+          val seatId = SeatId(s"$row$number")
+          Seat(seatId, theater1Id, auditorium2Id, RowNumber(row), SeatNumber(number), now, now)
         }
       }.toList
-      val seats3 = (1 to 15).flatMap { row =>
-        (1 to 10).map { number =>
-          val seatId = SeatId(s"C$row-$number")
-          Seat(seatId, auditorium3Id, s"C$row", number, now, now)
+      val seats3 = ('A' to 'P').flatMap { row =>
+        (1 to 25).map { number =>
+          val seatId = SeatId(s"$row$number")
+          Seat(seatId, theater2Id, auditorium3Id, RowNumber(row), SeatNumber(number), now, now)
         }
       }.toList
       val allSeats = (seats1 ++ seats2 ++ seats3).map(s => s.id -> s).toMap
 
-      // Sample showtimes - fix constructor to include endTime
       val showtime1Id = ShowtimeId(UUID.randomUUID())
       val showtime2Id = ShowtimeId(UUID.randomUUID())
       val showtime3Id = ShowtimeId(UUID.randomUUID())
@@ -246,12 +243,24 @@ object Main extends IOApp {
           theater1Id,
           auditorium1Id,
           now,
-          now.plusHours(2),
-          Map.empty, // seatTypes
           Map(
-            SeatType.Regular -> Money.fromDollars(12, 50),
+            SeatId("A1") -> SeatType.Standard,
+            SeatId("A2") -> SeatType.Standard,
+            SeatId("A3") -> SeatType.Premium,
+            SeatId("A4") -> SeatType.Premium,
+            SeatId("A5") -> SeatType.VIP,
+          ),
+          Map(
+            SeatType.Standard -> Money.fromDollars(12, 50),
             SeatType.Premium -> Money.fromDollars(18, 75),
             SeatType.VIP -> Money.fromDollars(25, 0)
+          ),
+          Map(
+            SeatId("A1") -> SeatStatus.Available,
+            SeatId("A2") -> SeatStatus.Available,
+            SeatId("A3") -> SeatStatus.Available,
+            SeatId("A4") -> SeatStatus.Available,
+            SeatId("A5") -> SeatStatus.Available
           ),
           now,
           now
@@ -262,12 +271,24 @@ object Main extends IOApp {
           theater2Id,
           auditorium2Id,
           now,
-          now.plusHours(5),
-          Map.empty,
           Map(
-            SeatType.Regular -> Money.fromDollars(15, 0),
-            SeatType.Premium -> Money.fromDollars(22, 50),
-            SeatType.VIP -> Money.fromDollars(30, 0)
+            SeatId("A1") -> SeatType.Standard,
+            SeatId("A2") -> SeatType.Standard,
+            SeatId("A3") -> SeatType.Premium,
+            SeatId("A4") -> SeatType.Premium,
+            SeatId("A5") -> SeatType.VIP,
+          ),
+          Map(
+            SeatType.Standard -> Money.fromDollars(12, 50),
+            SeatType.Premium -> Money.fromDollars(18, 75),
+            SeatType.VIP -> Money.fromDollars(25, 0)
+          ),
+          Map(
+            SeatId("A1") -> SeatStatus.Available,
+            SeatId("A2") -> SeatStatus.Available,
+            SeatId("A3") -> SeatStatus.Available,
+            SeatId("A4") -> SeatStatus.Available,
+            SeatId("A5") -> SeatStatus.Available
           ),
           now,
           now
@@ -278,12 +299,24 @@ object Main extends IOApp {
           theater2Id,
           auditorium3Id,
           now,
-          now.plusHours(3),
-          Map.empty,
           Map(
-            SeatType.Regular -> Money.fromDollars(14, 0),
-            SeatType.Premium -> Money.fromDollars(21, 0),
-            SeatType.VIP -> Money.fromDollars(28, 0)
+            SeatId("A1") -> SeatType.Standard,
+            SeatId("A2") -> SeatType.Standard,
+            SeatId("A3") -> SeatType.Premium,
+            SeatId("A4") -> SeatType.Premium,
+            SeatId("A5") -> SeatType.VIP,
+          ),
+          Map(
+            SeatType.Standard -> Money.fromDollars(12, 50),
+            SeatType.Premium -> Money.fromDollars(18, 75),
+            SeatType.VIP -> Money.fromDollars(25, 0)
+          ),
+          Map(
+            SeatId("A1") -> SeatStatus.Available,
+            SeatId("A2") -> SeatStatus.Available,
+            SeatId("A3") -> SeatStatus.Available,
+            SeatId("A4") -> SeatStatus.Available,
+            SeatId("A5") -> SeatStatus.Available
           ),
           now,
           now
@@ -294,8 +327,8 @@ object Main extends IOApp {
       val customer1Id = CustomerId(UUID.randomUUID())
       val customer2Id = CustomerId(UUID.randomUUID())
       val customers = Map(
-        customer1Id -> Customer(customer1Id, "John Doe", "john@example.com", now, now),
-        customer2Id -> Customer(customer2Id, "Jane Smith", "jane@example.com", now, now)
+        customer1Id -> Customer(customer1Id, "john@example.com", "John", "Doe", now, now),
+        customer2Id -> Customer(customer2Id, "jane@example.com", "Jane", "Doe", now, now)
       )
 
       // No tickets initially

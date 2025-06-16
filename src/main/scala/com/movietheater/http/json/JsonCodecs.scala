@@ -46,13 +46,13 @@ object JsonCodecs {
   
   // Enum codecs
   implicit val seatTypeEncoder: Encoder[SeatType] = Encoder[String].contramap {
-    case SeatType.Regular => "regular"
+    case SeatType.Standard => "standard"
     case SeatType.Premium => "premium"
     case SeatType.VIP => "vip"
   }
   
   implicit val seatTypeDecoder: Decoder[SeatType] = Decoder[String].emap {
-    case "regular" => Right(SeatType.Regular)
+    case "standard" => Right(SeatType.Standard)
     case "premium" => Right(SeatType.Premium)
     case "vip" => Right(SeatType.VIP)
     case other => Left(s"Invalid seat type: $other")

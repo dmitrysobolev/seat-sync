@@ -52,15 +52,15 @@ object DoobieTheaterAlgebra {
   
   // Row mapping for Theater
   private implicit val theaterRead: Read[Theater] = 
-    Read[(UUID, String, String, Int)].map {
-      case (id, name, location, capacity) =>
-        Theater(TheaterId(id), name, location, capacity)
+    Read[(UUID, String, String, Int, java.time.LocalDateTime, java.time.LocalDateTime)].map {
+      case (id, name, address, totalSeats, createdAt, updatedAt) =>
+        Theater(TheaterId(id), name, address, totalSeats, createdAt, updatedAt)
     }
   
   // SQL queries
   private def selectByIdQuery(theaterId: TheaterId): Query0[Theater] = {
     sql"""
-      SELECT id, name, location, capacity 
+      SELECT id, name, address, total_seats, created_at, updated_at 
       FROM theaters 
       WHERE id = ${theaterId.value}
     """.query[Theater]
@@ -68,7 +68,7 @@ object DoobieTheaterAlgebra {
 
   private def selectByNameQuery(name: String): Query0[Theater] = {
     sql"""
-      SELECT id, name, location, capacity 
+      SELECT id, name, address, total_seats, created_at, updated_at 
       FROM theaters 
       WHERE name = $name
     """.query[Theater]
@@ -76,7 +76,7 @@ object DoobieTheaterAlgebra {
 
   private val selectAllQuery: Query0[Theater] = {
     sql"""
-      SELECT id, name, location, capacity 
+      SELECT id, name, address, total_seats, created_at, updated_at 
       FROM theaters 
       ORDER BY name
     """.query[Theater]
@@ -84,8 +84,8 @@ object DoobieTheaterAlgebra {
 
   private def insertQuery(theater: Theater): Update0 = {
     sql"""
-      INSERT INTO theaters (id, name, location, capacity) 
-      VALUES (${theater.id.value}, ${theater.name}, ${theater.location}, ${theater.totalSeats})
+      INSERT INTO theaters (id, name, address, total_seats, created_at, updated_at) 
+      VALUES (${theater.id.value}, ${theater.name}, ${theater.address}, ${theater.totalSeats}, ${theater.createdAt}, ${theater.updatedAt})
     """.update
   }
 
@@ -93,9 +93,9 @@ object DoobieTheaterAlgebra {
     sql"""
       UPDATE theaters 
       SET name = ${theater.name}, 
-          location = ${theater.location}, 
-          capacity = ${theater.totalSeats},
-          updated_at = CURRENT_TIMESTAMP
+          address = ${theater.address}, 
+          total_seats = ${theater.totalSeats},
+          updated_at = ${theater.updatedAt}
       WHERE id = ${theater.id.value}
     """.update
   }

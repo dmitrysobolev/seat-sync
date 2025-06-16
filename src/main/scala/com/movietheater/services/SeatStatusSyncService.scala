@@ -22,13 +22,13 @@ class SeatStatusSyncService[F[_]: Sync](
       // Map ticket status to seat status
       newSeatStatus = ticket.status match {
         case TicketStatus.Reserved => SeatStatus.Reserved
-        case TicketStatus.Purchased => SeatStatus.Booked
+        case TicketStatus.Purchased => SeatStatus.Sold
         case TicketStatus.Cancelled => SeatStatus.Available
       }
       
       // Update seat status in showtime
       updatedShowtime = showtime.copy(
-        seatStatuses = showtime.seatStatuses + (ticket.seatId -> newSeatStatus)
+        seatStatus = showtime.seatStatus + (ticket.seatId -> newSeatStatus)
       )
       
       // Save updated showtime
@@ -58,7 +58,7 @@ class SeatStatusSyncService[F[_]: Sync](
           val mostRecentTicket = seatTickets.maxBy(_.purchasedAt)
           val seatStatus = mostRecentTicket.status match {
             case TicketStatus.Reserved => SeatStatus.Reserved
-            case TicketStatus.Purchased => SeatStatus.Booked
+            case TicketStatus.Purchased => SeatStatus.Sold
             case TicketStatus.Cancelled => SeatStatus.Available
           }
           (seatId, seatStatus)
@@ -74,7 +74,7 @@ class SeatStatusSyncService[F[_]: Sync](
       }
       
       // Update showtime with new seat statuses
-      updatedShowtime = showtime.copy(seatStatuses = allSeatStatuses)
+      updatedShowtime = showtime.copy(seatStatus = allSeatStatuses)
       
       // Save updated showtime
       _ <- showtimeAlgebra.update(updatedShowtime).flatMap {

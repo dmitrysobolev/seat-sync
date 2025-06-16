@@ -128,18 +128,17 @@ object DoobieShowtimeAlgebra {
 
   // Row mapping for Showtime
   private implicit val showtimeRead: Read[Showtime] =
-    Read[(UUID, UUID, UUID, UUID, LocalDateTime, LocalDateTime, LocalDateTime, LocalDateTime)].map {
-      case (id, movieId, theaterId, auditoriumId, startTime, endTime, createdAt, updatedAt) =>
+    Read[(UUID, UUID, UUID, UUID, LocalDateTime, LocalDateTime, LocalDateTime)].map {
+      case (id, movieId, theaterId, auditoriumId, startTime, createdAt, updatedAt) =>
         Showtime(
           id = ShowtimeId(id),
           movieId = MovieId(movieId),
           theaterId = TheaterId(theaterId),
           auditoriumId = AuditoriumId(auditoriumId),
           startTime = startTime,
-          endTime = endTime,
           seatTypes = Map.empty,    // Loaded separately
-          seatStatuses = Map.empty, // Loaded separately
-          prices = Map.empty,       // Loaded separately
+          seatPrices = Map.empty,   // Loaded separately
+          seatStatus = Map.empty,   // Loaded separately
           createdAt = createdAt,
           updatedAt = updatedAt
         )
@@ -148,9 +147,9 @@ object DoobieShowtimeAlgebra {
   private implicit val seatTypeMoneyRead: Read[(SeatType, Money)] =
     Read[(String, Long)].map { case (seatTypeStr, cents) =>
       val seatType = seatTypeStr match {
-        case "Regular" => SeatType.Regular
-        case "Premium" => SeatType.Premium
-        case "VIP" => SeatType.VIP
+        case "standard" => SeatType.Standard
+        case "premium" => SeatType.Premium
+        case "vip" => SeatType.VIP
         case invalid => throw new IllegalArgumentException(s"Invalid seat type: $invalid")
       }
       (seatType, Money.fromCents(cents))
@@ -159,9 +158,9 @@ object DoobieShowtimeAlgebra {
   private implicit val seatTypeAssignmentRead: Read[(SeatId, SeatType)] =
     Read[(String, String)].map { case (seatIdStr, seatTypeStr) =>
       val seatType = seatTypeStr match {
-        case "Regular" => SeatType.Regular
-        case "Premium" => SeatType.Premium
-        case "VIP" => SeatType.VIP
+        case "standard" => SeatType.Standard
+        case "premium" => SeatType.Premium
+        case "vip" => SeatType.VIP
         case invalid => throw new IllegalArgumentException(s"Invalid seat type: $invalid")
       }
       (SeatId(seatIdStr), seatType)
@@ -172,7 +171,7 @@ object DoobieShowtimeAlgebra {
       val status = statusStr match {
         case "Available" => SeatStatus.Available
         case "Reserved" => SeatStatus.Reserved
-        case "Booked" => SeatStatus.Booked
+        case "Sold" => SeatStatus.Sold
         case invalid => throw new IllegalArgumentException(s"Invalid seat status: $invalid")
       }
       (SeatId(seatIdStr), status)
@@ -181,7 +180,7 @@ object DoobieShowtimeAlgebra {
   // SQL queries
   private def selectByIdQuery(showtimeId: ShowtimeId): Query0[Showtime] = {
     sql"""
-      SELECT id, movie_id, theater_id, auditorium_id, start_time, end_time, created_at, updated_at 
+      SELECT id, movie_id, theater_id, auditorium_id, start_time, created_at, updated_at 
       FROM showtimes 
       WHERE id = ${showtimeId.value}
     """.query[Showtime]
@@ -238,14 +237,13 @@ object DoobieShowtimeAlgebra {
   private def insertQuery(showtime: Showtime): Update0 = {
     sql"""
       INSERT INTO showtimes (
-        id, movie_id, theater_id, auditorium_id, start_time, end_time, created_at, updated_at
+        id, movie_id, theater_id, auditorium_id, start_time, created_at, updated_at
       ) VALUES (
         ${showtime.id.value}, 
         ${showtime.movieId.value}, 
         ${showtime.theaterId.value}, 
         ${showtime.auditoriumId.value}, 
         ${showtime.startTime}, 
-        ${showtime.endTime}, 
         ${showtime.createdAt}, 
         ${showtime.updatedAt}
       )
@@ -280,7 +278,6 @@ object DoobieShowtimeAlgebra {
           theater_id = ${showtime.theaterId.value}, 
           auditorium_id = ${showtime.auditoriumId.value}, 
           start_time = ${showtime.startTime},
-          end_time = ${showtime.endTime},
           updated_at = CURRENT_TIMESTAMP
       WHERE id = ${showtime.id.value}
     """.update
