@@ -1,15 +1,16 @@
 package com.movietheater.services
 
 import cats.effect.IO
-import cats.effect.testing.scalatest.AsyncIOSpec
-import org.scalatest.matchers.should.Matchers
-import org.scalatest.freespec.AsyncFreeSpec
+import cats.effect.unsafe.implicits.global
+import com.movietheater.algebras._
 import com.movietheater.domain._
-import com.movietheater.interpreters._
-import java.util.UUID
+import com.movietheater.interpreters.doobie._
+import com.movietheater.interpreters.inmemory._
+import munit.CatsEffectSuite
 import java.time.LocalDateTime
+import java.util.UUID
 
-class ReservationServiceSpec extends AsyncFreeSpec with AsyncIOSpec with Matchers {
+class ReservationServiceSpec extends CatsEffectSuite {
 
   "ReservationService" - {
     "createReservation" - {
@@ -27,7 +28,7 @@ class ReservationServiceSpec extends AsyncFreeSpec with AsyncIOSpec with Matcher
       val seat1 = Seat(seatId1, "A1", 1, theaterId, SeatType.Regular)
       val seat2 = Seat(seatId2, "A1", 2, theaterId, SeatType.Premium)
       val customer = Customer(customerId, "test@example.com", "Test", "User")
-      val showtime = Showtime(showtimeId, movieId, theaterId, LocalDateTime.now().plusHours(1), LocalDateTime.now().plusHours(3), BigDecimal("10.00"))
+      val showtime = Showtime(showtimeId, movieId, theaterId, LocalDateTime.now().plusHours(1), LocalDateTime.now().plusHours(3), Money.fromDollars(10, 0))
 
       val test = for {
         // Create algebras
@@ -49,7 +50,7 @@ class ReservationServiceSpec extends AsyncFreeSpec with AsyncIOSpec with Matcher
 
       test.asserting { response =>
         response.tickets should have length 2
-        response.totalPrice shouldBe BigDecimal("25.00")
+        response.totalPrice shouldBe Money.fromDollars(25, 0)
       }
     }
 
@@ -83,7 +84,7 @@ class ReservationServiceSpec extends AsyncFreeSpec with AsyncIOSpec with Matcher
         val customerId = CustomerId(UUID.randomUUID())
         val seatIds = List(SeatId("A1-1"))
 
-        val showtime = Showtime(showtimeId, movieId, theaterId, LocalDateTime.now().plusHours(1), LocalDateTime.now().plusHours(3), BigDecimal("10.00"))
+        val showtime = Showtime(showtimeId, movieId, theaterId, LocalDateTime.now().plusHours(1), LocalDateTime.now().plusHours(3), Money.fromDollars(10, 0))
 
         val test = for {
           movieAlgebra <- InMemoryMovieAlgebra[IO]()
@@ -110,7 +111,7 @@ class ReservationServiceSpec extends AsyncFreeSpec with AsyncIOSpec with Matcher
         val customerId = CustomerId(UUID.randomUUID())
         val seatId = SeatId("A1-1")
 
-        val showtime = Showtime(showtimeId, movieId, theaterId, LocalDateTime.now().plusHours(1), LocalDateTime.now().plusHours(3), BigDecimal("10.00"))
+        val showtime = Showtime(showtimeId, movieId, theaterId, LocalDateTime.now().plusHours(1), LocalDateTime.now().plusHours(3), Money.fromDollars(10, 0))
         val customer = Customer(customerId, "test@example.com", "Test", "User")
 
         val test = for {
@@ -141,8 +142,8 @@ class ReservationServiceSpec extends AsyncFreeSpec with AsyncIOSpec with Matcher
         val seatId1 = SeatId("A1-1")
         val seatId2 = SeatId("A1-2")
 
-        val ticket1 = Ticket(ticketId1, showtimeId, seatId1, customerId, BigDecimal("10.00"), TicketStatus.Reserved, LocalDateTime.now())
-        val ticket2 = Ticket(ticketId2, showtimeId, seatId2, customerId, BigDecimal("15.00"), TicketStatus.Reserved, LocalDateTime.now())
+        val ticket1 = Ticket(ticketId1, showtimeId, seatId1, customerId, Money.fromDollars(10, 0), TicketStatus.Reserved, LocalDateTime.now())
+        val ticket2 = Ticket(ticketId2, showtimeId, seatId2, customerId, Money.fromDollars(15, 0), TicketStatus.Reserved, LocalDateTime.now())
 
         val test = for {
           movieAlgebra <- InMemoryMovieAlgebra[IO]()
@@ -190,7 +191,7 @@ class ReservationServiceSpec extends AsyncFreeSpec with AsyncIOSpec with Matcher
         val customerId = CustomerId(UUID.randomUUID())
         val seatId = SeatId("A1-1")
 
-        val ticket = Ticket(ticketId, showtimeId, seatId, customerId, BigDecimal("10.00"), TicketStatus.Reserved, LocalDateTime.now())
+        val ticket = Ticket(ticketId, showtimeId, seatId, customerId, Money.fromDollars(10, 0), TicketStatus.Reserved, LocalDateTime.now())
 
         val test = for {
           movieAlgebra <- InMemoryMovieAlgebra[IO]()
@@ -237,7 +238,7 @@ class ReservationServiceSpec extends AsyncFreeSpec with AsyncIOSpec with Matcher
         val theaterId = TheaterId(UUID.randomUUID())
         val showtimeId = ShowtimeId(UUID.randomUUID())
         val customerId = CustomerId(UUID.randomUUID())
-        val basePrice = BigDecimal("10.00")
+        val basePrice = Money.fromDollars(10, 0)
 
         val regularSeat = Seat(SeatId("A1-1"), "A1", 1, theaterId, SeatType.Regular)
         val premiumSeat = Seat(SeatId("A1-2"), "A1", 2, theaterId, SeatType.Premium)
@@ -265,10 +266,10 @@ class ReservationServiceSpec extends AsyncFreeSpec with AsyncIOSpec with Matcher
 
         test.asserting { response =>
           response.tickets should have length 3
-          response.totalPrice shouldBe BigDecimal("45.00") // 10.00 + 15.00 + 20.00
+          response.totalPrice shouldBe Money.fromDollars(45, 0) // 10.00 + 15.00 + 20.00
           response.tickets.find(_.seatId == regularSeat.id).get.price shouldBe basePrice
-          response.tickets.find(_.seatId == premiumSeat.id).get.price shouldBe basePrice * 1.5
-          response.tickets.find(_.seatId == vipSeat.id).get.price shouldBe basePrice * 2.0
+          response.tickets.find(_.seatId == premiumSeat.id).get.price shouldBe basePrice * 3 / 2
+          response.tickets.find(_.seatId == vipSeat.id).get.price shouldBe basePrice * 2
         }
       }
     }
@@ -281,9 +282,9 @@ class ReservationServiceSpec extends AsyncFreeSpec with AsyncIOSpec with Matcher
         val ticketId2 = TicketId(UUID.randomUUID())
         val ticketId3 = TicketId(UUID.randomUUID())
 
-        val ticket1 = Ticket(ticketId1, ShowtimeId(UUID.randomUUID()), SeatId("A1-1"), customerId, BigDecimal("10.00"), TicketStatus.Purchased, LocalDateTime.now())
-        val ticket2 = Ticket(ticketId2, ShowtimeId(UUID.randomUUID()), SeatId("A1-2"), customerId, BigDecimal("15.00"), TicketStatus.Reserved, LocalDateTime.now())
-        val ticket3 = Ticket(ticketId3, ShowtimeId(UUID.randomUUID()), SeatId("A1-3"), otherCustomerId, BigDecimal("12.00"), TicketStatus.Purchased, LocalDateTime.now())
+        val ticket1 = Ticket(ticketId1, ShowtimeId(UUID.randomUUID()), SeatId("A1-1"), customerId, Money.fromDollars(10, 0), TicketStatus.Purchased, LocalDateTime.now())
+        val ticket2 = Ticket(ticketId2, ShowtimeId(UUID.randomUUID()), SeatId("A1-2"), customerId, Money.fromDollars(15, 0), TicketStatus.Reserved, LocalDateTime.now())
+        val ticket3 = Ticket(ticketId3, ShowtimeId(UUID.randomUUID()), SeatId("A1-3"), otherCustomerId, Money.fromDollars(12, 0), TicketStatus.Purchased, LocalDateTime.now())
 
         val test = for {
           movieAlgebra <- InMemoryMovieAlgebra[IO]()
@@ -365,8 +366,8 @@ class ReservationServiceSpec extends AsyncFreeSpec with AsyncIOSpec with Matcher
           val showtimeId1 = ShowtimeId(UUID.randomUUID())
           val showtimeId2 = ShowtimeId(UUID.randomUUID())
           val now = LocalDateTime.now()
-          val showtime1 = Showtime(showtimeId1, movieId, theaterId, now.plusHours(1), now.plusHours(3), BigDecimal("10.00"))
-          val showtime2 = Showtime(showtimeId2, movieId, theaterId, now.plusDays(15), now.plusDays(15).plusHours(2), BigDecimal("12.00"))
+          val showtime1 = Showtime(showtimeId1, movieId, theaterId, now.plusHours(1), now.plusHours(3), Money.fromDollars(10, 0))
+          val showtime2 = Showtime(showtimeId2, movieId, theaterId, now.plusDays(15), now.plusDays(15).plusHours(2), Money.fromDollars(12, 0))
 
           val test = for {
             movieAlgebra <- InMemoryMovieAlgebra[IO]()
@@ -394,8 +395,8 @@ class ReservationServiceSpec extends AsyncFreeSpec with AsyncIOSpec with Matcher
           val showtimeId1 = ShowtimeId(UUID.randomUUID())
           val showtimeId2 = ShowtimeId(UUID.randomUUID())
           val now = LocalDateTime.now()
-          val showtime1 = Showtime(showtimeId1, movieId, theaterId, now.plusHours(1), now.plusHours(3), BigDecimal("10.00"))
-          val showtime2 = Showtime(showtimeId2, movieId, theaterId, now.plusDays(1), now.plusDays(1).plusHours(2), BigDecimal("12.00"))
+          val showtime1 = Showtime(showtimeId1, movieId, theaterId, now.plusHours(1), now.plusHours(3), Money.fromDollars(10, 0))
+          val showtime2 = Showtime(showtimeId2, movieId, theaterId, now.plusDays(1), now.plusDays(1).plusHours(2), Money.fromDollars(12, 0))
 
           val test = for {
             movieAlgebra <- InMemoryMovieAlgebra[IO](Map(movieId -> Movie(movieId, "Test Movie", "A test movie", 120, "PG")))
@@ -443,8 +444,8 @@ class ReservationServiceSpec extends AsyncFreeSpec with AsyncIOSpec with Matcher
           val showtimeId1 = ShowtimeId(UUID.randomUUID())
           val showtimeId2 = ShowtimeId(UUID.randomUUID())
           val now = LocalDateTime.now()
-          val showtime1 = Showtime(showtimeId1, movieId, theaterId, now.plusHours(1), now.plusHours(3), BigDecimal("10.00"))
-          val showtime2 = Showtime(showtimeId2, movieId, theaterId, now.plusDays(1), now.plusDays(1).plusHours(2), BigDecimal("12.00"))
+          val showtime1 = Showtime(showtimeId1, movieId, theaterId, now.plusHours(1), now.plusHours(3), Money.fromDollars(10, 0))
+          val showtime2 = Showtime(showtimeId2, movieId, theaterId, now.plusDays(1), now.plusDays(1).plusHours(2), Money.fromDollars(12, 0))
 
           val test = for {
             movieAlgebra <- InMemoryMovieAlgebra[IO]()

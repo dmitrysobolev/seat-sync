@@ -1,21 +1,21 @@
 package com.movietheater
 
-import cats.effect._
-import cats.implicits._
+import cats.effect.{IO, IOApp}
+import com.movietheater.algebras._
+import com.movietheater.config.AppConfig
+import com.movietheater.http.HttpRoutes
+import com.movietheater.interpreters.doobie._
+import com.movietheater.interpreters.inmemory._
+import com.movietheater.services.{ReservationService, SeatStatusSyncService}
+import doobie.util.transactor.Transactor
 import org.http4s.ember.server.EmberServerBuilder
-import org.http4s.server.middleware.Logger
+import org.http4s.server.middleware.{Logger, RequestId}
+import pureconfig.ConfigSource
+import pureconfig.generic.auto._
 import com.comcast.ip4s._
 import com.movietheater.domain._
-import com.movietheater.config._
-import com.movietheater.interpreters._
-import com.movietheater.services.ReservationService
-import com.movietheater.http.routes.ReservationRoutes
-import com.movietheater.db.Database
-import pureconfig._
-import pureconfig.generic.derivation.default._
 import java.util.UUID
 import java.time.LocalDateTime
-import doobie.Transactor
 
 object Main extends IOApp {
 
@@ -198,47 +198,104 @@ object Main extends IOApp {
       // Sample theaters
       val theater1Id = TheaterId(UUID.randomUUID())
       val theater2Id = TheaterId(UUID.randomUUID())
+      val now = LocalDateTime.now()
       val theaters = Map(
-        theater1Id -> Theater(theater1Id, "Cinema One", "Downtown Mall", 100),
-        theater2Id -> Theater(theater2Id, "Grand Theater", "Uptown Plaza", 150)
+        theater1Id -> Theater(theater1Id, "Cinema One", "Downtown Mall", now, now),
+        theater2Id -> Theater(theater2Id, "Grand Theater", "Uptown Plaza", now, now)
+      )
+
+      // Sample auditoriums
+      val auditorium1Id = AuditoriumId(UUID.randomUUID())
+      val auditorium2Id = AuditoriumId(UUID.randomUUID())
+      val auditorium3Id = AuditoriumId(UUID.randomUUID())
+      val auditoriums = Map(
+        auditorium1Id -> Auditorium(auditorium1Id, theater1Id, "Auditorium 1", now, now),
+        auditorium2Id -> Auditorium(auditorium2Id, theater1Id, "Auditorium 2", now, now),
+        auditorium3Id -> Auditorium(auditorium3Id, theater2Id, "Main Auditorium", now, now)
       )
 
       // Sample seats - fix constructor parameters
       val seats1 = (1 to 10).flatMap { row =>
         (1 to 10).map { number =>
           val seatId = SeatId(s"A$row-$number")
-          val seatType = if (row <= 3) SeatType.VIP else if (row <= 6) SeatType.Premium else SeatType.Regular
-          seatId -> Seat(seatId, s"A$row", number, theater1Id, seatType)
+          Seat(seatId, auditorium1Id, s"A$row", number, now, now)
         }
-      }.toMap
-
-      val seats2 = (1 to 15).flatMap { row =>
+      }.toList
+      val seats2 = (1 to 10).flatMap { row =>
         (1 to 10).map { number =>
           val seatId = SeatId(s"B$row-$number")
-          val seatType = if (row <= 3) SeatType.VIP else if (row <= 8) SeatType.Premium else SeatType.Regular
-          seatId -> Seat(seatId, s"B$row", number, theater2Id, seatType)
+          Seat(seatId, auditorium2Id, s"B$row", number, now, now)
         }
-      }.toMap
-
-      val allSeats = seats1 ++ seats2
+      }.toList
+      val seats3 = (1 to 15).flatMap { row =>
+        (1 to 10).map { number =>
+          val seatId = SeatId(s"C$row-$number")
+          Seat(seatId, auditorium3Id, s"C$row", number, now, now)
+        }
+      }.toList
+      val allSeats = (seats1 ++ seats2 ++ seats3).map(s => s.id -> s).toMap
 
       // Sample showtimes - fix constructor to include endTime
-      val now = LocalDateTime.now()
       val showtime1Id = ShowtimeId(UUID.randomUUID())
       val showtime2Id = ShowtimeId(UUID.randomUUID())
       val showtime3Id = ShowtimeId(UUID.randomUUID())
       val showtimes = Map(
-        showtime1Id -> Showtime(showtime1Id, movie1Id, theater1Id, now.plusHours(2), now.plusHours(4).plusMinutes(16), BigDecimal("12.50")),
-        showtime2Id -> Showtime(showtime2Id, movie2Id, theater1Id, now.plusHours(5), now.plusHours(7).plusMinutes(28), BigDecimal("15.00")),
-        showtime3Id -> Showtime(showtime3Id, movie1Id, theater2Id, now.plusHours(3), now.plusHours(5).plusMinutes(16), BigDecimal("14.00"))
+        showtime1Id -> Showtime(
+          showtime1Id,
+          movie1Id,
+          theater1Id,
+          auditorium1Id,
+          now,
+          now.plusHours(2),
+          Map.empty, // seatTypes
+          Map(
+            SeatType.Regular -> Money.fromDollars(12, 50),
+            SeatType.Premium -> Money.fromDollars(18, 75),
+            SeatType.VIP -> Money.fromDollars(25, 0)
+          ),
+          now,
+          now
+        ),
+        showtime2Id -> Showtime(
+          showtime2Id,
+          movie2Id,
+          theater2Id,
+          auditorium2Id,
+          now,
+          now.plusHours(5),
+          Map.empty,
+          Map(
+            SeatType.Regular -> Money.fromDollars(15, 0),
+            SeatType.Premium -> Money.fromDollars(22, 50),
+            SeatType.VIP -> Money.fromDollars(30, 0)
+          ),
+          now,
+          now
+        ),
+        showtime3Id -> Showtime(
+          showtime3Id,
+          movie1Id,
+          theater2Id,
+          auditorium3Id,
+          now,
+          now.plusHours(3),
+          Map.empty,
+          Map(
+            SeatType.Regular -> Money.fromDollars(14, 0),
+            SeatType.Premium -> Money.fromDollars(21, 0),
+            SeatType.VIP -> Money.fromDollars(28, 0)
+          ),
+          now,
+          now
+        )
       )
 
       // Sample customers
       val customer1Id = CustomerId(UUID.randomUUID())
       val customer2Id = CustomerId(UUID.randomUUID())
       val customers = Map(
-        customer1Id -> Customer(customer1Id, "john@example.com", "John", "Doe"),
-        customer2Id -> Customer(customer2Id, "jane@example.com", "Jane", "Smith")
+        customer1Id -> Customer(customer1Id, "John Doe", "john@example.com", now, now),
+        customer2Id -> Customer(customer2Id, "Jane Smith", "jane@example.com", now, now)
       )
 
       // No tickets initially

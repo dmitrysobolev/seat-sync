@@ -14,7 +14,8 @@ class ReservationService[F[_]: Sync](
   showtimeAlgebra: ShowtimeAlgebra[F],
   seatAlgebra: SeatAlgebra[F],
   ticketAlgebra: TicketAlgebra[F],
-  customerAlgebra: CustomerAlgebra[F]
+  customerAlgebra: CustomerAlgebra[F],
+  seatStatusSyncService: SeatStatusSyncService[F]
 ) {
 
   def getAvailableSeats(showtimeId: ShowtimeId): F[AvailableSeatsResponse] = {
@@ -64,7 +65,8 @@ class ReservationService[F[_]: Sync](
       // Create tickets
       now = LocalDateTime.now()
       tickets: List[Ticket] = seats.map { seat =>
-        val price = calculatePrice(showtime.price, seat.seatType)
+        val price = showtime.getPriceForSeat(seat.id)
+          .getOrElse(throw DomainError.InvalidReservation(s"No price defined for seat ${seat.id}"))
         Ticket(
           id = TicketId(UUID.randomUUID()),
           showtimeId = request.showtimeId,
@@ -72,45 +74,69 @@ class ReservationService[F[_]: Sync](
           customerId = request.customerId,
           price = price,
           status = TicketStatus.Reserved,
-          purchasedAt = now
+          purchasedAt = now,
+          createdAt = now,
+          updatedAt = now
         )
       }
 
-      // Save tickets
-      savedTickets <- tickets.traverse(ticketAlgebra.create)
-      totalPrice: BigDecimal = savedTickets.map(_.price).sum
+      // Save tickets and sync seat statuses
+      savedTickets <- tickets.traverse { ticket =>
+        for {
+          savedTicket <- ticketAlgebra.create(ticket)
+          _ <- seatStatusSyncService.syncSeatStatus(savedTicket)
+        } yield savedTicket
+      }
+      totalPrice = savedTickets.map(_.price).foldLeft(Money.zero)(_ + _)
 
     } yield ReservationResponse(savedTickets, totalPrice)
   }
 
   def confirmReservation(ticketIds: List[TicketId]): F[List[Ticket]] = {
-    ticketIds.traverse { ticketId =>
-      ticketAlgebra.updateStatus(ticketId, TicketStatus.Purchased).flatMap {
-        case Some(ticket) => ticket.pure[F]
-        case None => MonadThrow[F].raiseError[Ticket](DomainError.TicketNotFound(ticketId))
+    for {
+      tickets <- ticketIds.traverse(ticketAlgebra.findById)
+      updatedTickets <- ticketIds.traverse { ticketId =>
+        for {
+          ticket <- ticketAlgebra.updateStatus(ticketId, TicketStatus.Purchased).flatMap {
+            case Some(t) => t.pure[F]
+            case None => MonadThrow[F].raiseError[Ticket](DomainError.TicketNotFound(ticketId))
+          }
+          _ <- seatStatusSyncService.syncSeatStatus(ticket)
+        } yield ticket
       }
-    }
+    } yield updatedTickets
   }
 
-  def cancelReservation(ticketIds: List[TicketId]): F[List[Ticket]] = {
-    ticketIds.traverse { ticketId =>
-      ticketAlgebra.updateStatus(ticketId, TicketStatus.Cancelled).flatMap {
-        case Some(ticket) => ticket.pure[F]
-        case None => MonadThrow[F].raiseError[Ticket](DomainError.TicketNotFound(ticketId))
+  def cancelReservation(ticketIds: List[TicketId]): F[Unit] = {
+    for {
+      ticketsOpt <- ticketIds.traverse(ticketAlgebra.findById)
+      tickets = ticketsOpt.flatten
+      _ <- if (tickets.isEmpty) MonadThrow[F].raiseError(DomainError.InvalidReservation("No valid tickets found for cancellation")) else MonadThrow[F].unit
+      showtimeId = tickets.head.showtimeId
+      _ <- tickets.traverse { ticket =>
+        if (ticket.showtimeId != showtimeId) {
+          MonadThrow[F].raiseError(DomainError.InvalidReservation(
+            s"Ticket ${ticket.id} belongs to a different showtime"
+          ))
+        } else {
+          MonadThrow[F].pure(())
+        }
       }
-    }
+      // Update ticket statuses and sync seat statuses
+      _ <- tickets.traverse { ticket =>
+        for {
+          updatedTicket <- ticketAlgebra.updateStatus(ticket.id, TicketStatus.Cancelled).flatMap {
+            case Some(t) => t.pure[F]
+            case None => MonadThrow[F].raiseError[Ticket](DomainError.TicketNotFound(ticket.id))
+          }
+          _ <- seatStatusSyncService.syncSeatStatus(updatedTicket)
+        } yield ()
+      }
+    } yield ()
   }
 
   def getCustomerTickets(customerId: CustomerId): F[List[Ticket]] = {
     ticketAlgebra.findByCustomer(customerId)
-  }
-
-  private def calculatePrice(basePrice: BigDecimal, seatType: SeatType): BigDecimal = {
-    seatType match {
-      case SeatType.Regular => basePrice
-      case SeatType.Premium => basePrice * 1.5
-      case SeatType.VIP => basePrice * 2.0
-    }
   }
 
   // Showtime endpoints
@@ -149,13 +175,15 @@ object ReservationService {
     showtimeAlgebra: ShowtimeAlgebra[F],
     seatAlgebra: SeatAlgebra[F],
     ticketAlgebra: TicketAlgebra[F],
-    customerAlgebra: CustomerAlgebra[F]
+    customerAlgebra: CustomerAlgebra[F],
+    seatStatusSyncService: SeatStatusSyncService[F]
   ): ReservationService[F] = new ReservationService[F](
     movieAlgebra,
     theaterAlgebra,
     showtimeAlgebra,
     seatAlgebra,
     ticketAlgebra,
-    customerAlgebra
+    customerAlgebra,
+    seatStatusSyncService
   )
 } 

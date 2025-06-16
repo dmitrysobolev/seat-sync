@@ -29,6 +29,10 @@ object JsonCodecs {
   implicit val seatIdEncoder: Encoder[SeatId] = Encoder[String].contramap(_.value)
   implicit val seatIdDecoder: Decoder[SeatId] = Decoder[String].map(SeatId.apply)
   
+  // Money codecs
+  implicit val moneyEncoder: Encoder[Money] = Encoder[Long].contramap(_.cents)
+  implicit val moneyDecoder: Decoder[Money] = Decoder[Long].map(Money.fromCents)
+  
   // LocalDateTime codec
   private val dateTimeFormatter = DateTimeFormatter.ISO_LOCAL_DATE_TIME
   implicit val localDateTimeEncoder: Encoder[LocalDateTime] = 

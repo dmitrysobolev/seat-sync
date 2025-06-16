@@ -128,7 +128,7 @@ class ModelsSpec extends AnyWordSpec with Matchers {
       val theaterId = TheaterId(UUID.randomUUID())
       val startTime = LocalDateTime.now()
       val endTime = startTime.plusHours(2)
-      val price = BigDecimal("15.50")
+      val price = Money.fromDollars(15, 50)
       
       val showtime = Showtime(showtimeId, movieId, theaterId, startTime, endTime, price)
       
@@ -147,7 +147,7 @@ class ModelsSpec extends AnyWordSpec with Matchers {
       val showtimeId = ShowtimeId(UUID.randomUUID())
       val seatId = SeatId("A1-5")
       val customerId = CustomerId(UUID.randomUUID())
-      val price = BigDecimal("20.00")
+      val price = Money.fromDollars(20, 0)
       val purchasedAt = LocalDateTime.now()
       
       val ticket = Ticket(ticketId, showtimeId, seatId, customerId, price, TicketStatus.Purchased, purchasedAt)
@@ -191,7 +191,7 @@ class ModelsSpec extends AnyWordSpec with Matchers {
   "ReservationResponse" should {
     "be created with all fields" in {
       val tickets = List.empty[Ticket]
-      val totalPrice = BigDecimal("50.00")
+      val totalPrice = Money.fromDollars(50, 0)
       
       val response = ReservationResponse(tickets, totalPrice)
       

@@ -1,4 +1,4 @@
-package com.movietheater.interpreters
+package com.movietheater.interpreters.doobie
 
 import doobie._
 import doobie.implicits._

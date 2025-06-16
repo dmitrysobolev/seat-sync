@@ -1,24 +1,26 @@
 package com.movietheater.http
 
 import cats.effect.IO
-import cats.effect.testing.scalatest.AsyncIOSpec
+import cats.effect.unsafe.implicits.global
+import com.movietheater.algebras._
+import com.movietheater.domain._
+import com.movietheater.interpreters.doobie._
+import com.movietheater.interpreters.inmemory._
+import com.movietheater.services.{ReservationService, SeatStatusSyncService}
+import munit.CatsEffectSuite
 import org.http4s._
+import org.http4s.implicits._
+import org.http4s.circe.CirceEntityCodec._
+import io.circe.syntax._
+import java.time.LocalDateTime
+import java.util.UUID
 import org.http4s.headers.`Content-Type`
 import org.http4s.circe._
-import org.http4s.implicits._
-import org.scalatest.matchers.should.Matchers
-import org.scalatest.freespec.AsyncFreeSpec
-import com.movietheater.domain._
-import com.movietheater.interpreters._
-import com.movietheater.services.ReservationService
 import com.movietheater.http.routes.ReservationRoutes
 import com.movietheater.http.json.JsonCodecs._
 import com.movietheater.Main
-import io.circe.syntax._
-import java.util.UUID
-import java.time.LocalDateTime
 
-class ExtendedHttpRoutesSpec extends AsyncFreeSpec with AsyncIOSpec with Matchers {
+class ExtendedHttpRoutesSpec extends CatsEffectSuite {
 
   def createFullService(): IO[ReservationService[IO]] =
     for {

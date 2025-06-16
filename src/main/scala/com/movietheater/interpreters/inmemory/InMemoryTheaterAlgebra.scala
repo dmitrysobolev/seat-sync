@@ -1,4 +1,4 @@
-package com.movietheater.interpreters
+package com.movietheater.interpreters.inmemory
 
 import cats.effect.Sync
 import cats.effect.Ref

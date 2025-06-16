@@ -15,7 +15,7 @@ class InMemoryShowtimeAlgebraSpec extends AsyncFreeSpec with AsyncIOSpec with Ma
       "should return showtime when it exists" in {
         val showtimeId = ShowtimeId(UUID.randomUUID())
         val showtime = Showtime(showtimeId, MovieId(UUID.randomUUID()), TheaterId(UUID.randomUUID()), 
-          LocalDateTime.now(), LocalDateTime.now().plusHours(2), BigDecimal("15.00"))
+          LocalDateTime.now(), LocalDateTime.now().plusHours(2), Money.fromDollars(15, 0))
         
         val test = for {
           algebra <- InMemoryShowtimeAlgebra[IO](Map(showtimeId -> showtime))
@@ -43,11 +43,11 @@ class InMemoryShowtimeAlgebraSpec extends AsyncFreeSpec with AsyncIOSpec with Ma
         val movieId2 = MovieId(UUID.randomUUID())
         val theaterId = TheaterId(UUID.randomUUID())
         val showtime1 = Showtime(ShowtimeId(UUID.randomUUID()), movieId1, theaterId, 
-          LocalDateTime.now(), LocalDateTime.now().plusHours(2), BigDecimal("15.00"))
+          LocalDateTime.now(), LocalDateTime.now().plusHours(2), Money.fromDollars(15, 0))
         val showtime2 = Showtime(ShowtimeId(UUID.randomUUID()), movieId1, theaterId, 
-          LocalDateTime.now().plusDays(1), LocalDateTime.now().plusDays(1).plusHours(2), BigDecimal("15.00"))
+          LocalDateTime.now().plusDays(1), LocalDateTime.now().plusDays(1).plusHours(2), Money.fromDollars(15, 0))
         val showtime3 = Showtime(ShowtimeId(UUID.randomUUID()), movieId2, theaterId, 
-          LocalDateTime.now(), LocalDateTime.now().plusHours(2), BigDecimal("12.00"))
+          LocalDateTime.now(), LocalDateTime.now().plusHours(2), Money.fromDollars(12, 0))
         val showtimes = Map(showtime1.id -> showtime1, showtime2.id -> showtime2, showtime3.id -> showtime3)
         
         val test = for {
@@ -78,11 +78,11 @@ class InMemoryShowtimeAlgebraSpec extends AsyncFreeSpec with AsyncIOSpec with Ma
         val theaterId1 = TheaterId(UUID.randomUUID())
         val theaterId2 = TheaterId(UUID.randomUUID())
         val showtime1 = Showtime(ShowtimeId(UUID.randomUUID()), movieId, theaterId1, 
-          LocalDateTime.now(), LocalDateTime.now().plusHours(2), BigDecimal("15.00"))
+          LocalDateTime.now(), LocalDateTime.now().plusHours(2), Money.fromDollars(15, 0))
         val showtime2 = Showtime(ShowtimeId(UUID.randomUUID()), movieId, theaterId1, 
-          LocalDateTime.now().plusDays(1), LocalDateTime.now().plusDays(1).plusHours(2), BigDecimal("15.00"))
+          LocalDateTime.now().plusDays(1), LocalDateTime.now().plusDays(1).plusHours(2), Money.fromDollars(15, 0))
         val showtime3 = Showtime(ShowtimeId(UUID.randomUUID()), movieId, theaterId2, 
-          LocalDateTime.now(), LocalDateTime.now().plusHours(2), BigDecimal("12.00"))
+          LocalDateTime.now(), LocalDateTime.now().plusHours(2), Money.fromDollars(12, 0))
         val showtimes = Map(showtime1.id -> showtime1, showtime2.id -> showtime2, showtime3.id -> showtime3)
         
         val test = for {
@@ -110,7 +110,7 @@ class InMemoryShowtimeAlgebraSpec extends AsyncFreeSpec with AsyncIOSpec with Ma
     "create" - {
       "should create and return new showtime" in {
         val showtime = Showtime(ShowtimeId(UUID.randomUUID()), MovieId(UUID.randomUUID()), TheaterId(UUID.randomUUID()), 
-          LocalDateTime.now(), LocalDateTime.now().plusHours(2), BigDecimal("15.00"))
+          LocalDateTime.now(), LocalDateTime.now().plusHours(2), Money.fromDollars(15, 0))
         
         val test = for {
           algebra <- InMemoryShowtimeAlgebra[IO]()
@@ -129,8 +129,8 @@ class InMemoryShowtimeAlgebraSpec extends AsyncFreeSpec with AsyncIOSpec with Ma
       "should update existing showtime" in {
         val showtimeId = ShowtimeId(UUID.randomUUID())
         val originalShowtime = Showtime(showtimeId, MovieId(UUID.randomUUID()), TheaterId(UUID.randomUUID()), 
-          LocalDateTime.now(), LocalDateTime.now().plusHours(2), BigDecimal("15.00"))
-        val updatedShowtime = originalShowtime.copy(price = BigDecimal("20.00"))
+          LocalDateTime.now(), LocalDateTime.now().plusHours(2), Money.fromDollars(15, 0))
+        val updatedShowtime = originalShowtime.copy(price = Money.fromDollars(20, 0))
         
         val test = for {
           algebra <- InMemoryShowtimeAlgebra[IO](Map(showtimeId -> originalShowtime))
@@ -146,7 +146,7 @@ class InMemoryShowtimeAlgebraSpec extends AsyncFreeSpec with AsyncIOSpec with Ma
       
       "should return None when showtime doesn't exist" in {
         val showtime = Showtime(ShowtimeId(UUID.randomUUID()), MovieId(UUID.randomUUID()), TheaterId(UUID.randomUUID()), 
-          LocalDateTime.now(), LocalDateTime.now().plusHours(2), BigDecimal("15.00"))
+          LocalDateTime.now(), LocalDateTime.now().plusHours(2), Money.fromDollars(15, 0))
         
         val test = for {
           algebra <- InMemoryShowtimeAlgebra[IO]()
@@ -161,7 +161,7 @@ class InMemoryShowtimeAlgebraSpec extends AsyncFreeSpec with AsyncIOSpec with Ma
       "should delete existing showtime" in {
         val showtimeId = ShowtimeId(UUID.randomUUID())
         val showtime = Showtime(showtimeId, MovieId(UUID.randomUUID()), TheaterId(UUID.randomUUID()), 
-          LocalDateTime.now(), LocalDateTime.now().plusHours(2), BigDecimal("15.00"))
+          LocalDateTime.now(), LocalDateTime.now().plusHours(2), Money.fromDollars(15, 0))
         
         val test = for {
           algebra <- InMemoryShowtimeAlgebra[IO](Map(showtimeId -> showtime))

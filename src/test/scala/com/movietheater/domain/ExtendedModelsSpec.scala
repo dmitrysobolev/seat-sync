@@ -210,11 +210,11 @@ class ExtendedModelsSpec extends AnyWordSpec with Matchers {
         TheaterId(UUID.randomUUID()),
         time,
         time,  // same as start time
-        BigDecimal(0)  // zero price
+        Money.zero  // zero price
       )
       
       showtime.startTime shouldBe showtime.endTime
-      showtime.price shouldBe BigDecimal(0)
+      showtime.price shouldBe Money.zero
     }
     
     "Ticket should handle zero price" in {
@@ -223,12 +223,12 @@ class ExtendedModelsSpec extends AnyWordSpec with Matchers {
         ShowtimeId(UUID.randomUUID()),
         SeatId(""),
         CustomerId(UUID.randomUUID()),
-        BigDecimal(0),  // zero price
+        Money.zero,  // zero price
         TicketStatus.Reserved,
         LocalDateTime.now()
       )
       
-      ticket.price shouldBe BigDecimal(0)
+      ticket.price shouldBe Money.zero
     }
   }
 
@@ -246,11 +246,11 @@ class ExtendedModelsSpec extends AnyWordSpec with Matchers {
     "ReservationResponse should handle empty tickets and zero price" in {
       val response = ReservationResponse(
         List.empty,   // empty tickets
-        BigDecimal(0) // zero price
+        Money.zero // zero price
       )
       
       response.tickets shouldBe empty
-      response.totalPrice shouldBe BigDecimal(0)
+      response.totalPrice shouldBe Money.zero
     }
     
     "AvailableSeatsResponse should handle empty seats" in {

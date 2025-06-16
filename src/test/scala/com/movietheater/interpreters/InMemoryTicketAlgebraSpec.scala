@@ -19,7 +19,7 @@ class InMemoryTicketAlgebraSpec extends AsyncFreeSpec with AsyncIOSpec with Matc
           ShowtimeId(UUID.randomUUID()),
           SeatId("A1-1"),
           CustomerId(UUID.randomUUID()),
-          BigDecimal("10.00"),
+          Money.fromDollars(10, 0),
           TicketStatus.Reserved,
           LocalDateTime.now()
         )
@@ -56,7 +56,7 @@ class InMemoryTicketAlgebraSpec extends AsyncFreeSpec with AsyncIOSpec with Matc
           ShowtimeId(UUID.randomUUID()),
           SeatId("A1-1"),
           customerId,
-          BigDecimal("10.00"),
+          Money.fromDollars(10, 0),
           TicketStatus.Reserved,
           LocalDateTime.now()
         )
@@ -65,7 +65,7 @@ class InMemoryTicketAlgebraSpec extends AsyncFreeSpec with AsyncIOSpec with Matc
           ShowtimeId(UUID.randomUUID()),
           SeatId("A1-2"),
           customerId,
-          BigDecimal("15.00"),
+          Money.fromDollars(15, 0),
           TicketStatus.Reserved,
           LocalDateTime.now()
         )
@@ -74,7 +74,7 @@ class InMemoryTicketAlgebraSpec extends AsyncFreeSpec with AsyncIOSpec with Matc
           ShowtimeId(UUID.randomUUID()),
           SeatId("B1-1"),
           CustomerId(UUID.randomUUID()),
-          BigDecimal("20.00"),
+          Money.fromDollars(20, 0),
           TicketStatus.Reserved,
           LocalDateTime.now()
         )
@@ -116,7 +116,7 @@ class InMemoryTicketAlgebraSpec extends AsyncFreeSpec with AsyncIOSpec with Matc
           showtimeId,
           SeatId("A1-1"),
           CustomerId(UUID.randomUUID()),
-          BigDecimal("10.00"),
+          Money.fromDollars(10, 0),
           TicketStatus.Reserved,
           LocalDateTime.now()
         )
@@ -125,7 +125,7 @@ class InMemoryTicketAlgebraSpec extends AsyncFreeSpec with AsyncIOSpec with Matc
           showtimeId,
           SeatId("A1-2"),
           CustomerId(UUID.randomUUID()),
-          BigDecimal("15.00"),
+          Money.fromDollars(15, 0),
           TicketStatus.Reserved,
           LocalDateTime.now()
         )
@@ -134,7 +134,7 @@ class InMemoryTicketAlgebraSpec extends AsyncFreeSpec with AsyncIOSpec with Matc
           ShowtimeId(UUID.randomUUID()),
           SeatId("B1-1"),
           CustomerId(UUID.randomUUID()),
-          BigDecimal("20.00"),
+          Money.fromDollars(20, 0),
           TicketStatus.Reserved,
           LocalDateTime.now()
         )
@@ -177,7 +177,7 @@ class InMemoryTicketAlgebraSpec extends AsyncFreeSpec with AsyncIOSpec with Matc
           showtimeId,
           seatId,
           CustomerId(UUID.randomUUID()),
-          BigDecimal("10.00"),
+          Money.fromDollars(10, 0),
           TicketStatus.Reserved,
           LocalDateTime.now()
         )
@@ -215,7 +215,7 @@ class InMemoryTicketAlgebraSpec extends AsyncFreeSpec with AsyncIOSpec with Matc
           showtimeId1,
           seatId,
           CustomerId(UUID.randomUUID()),
-          BigDecimal("10.00"),
+          Money.fromDollars(10, 0),
           TicketStatus.Reserved,
           LocalDateTime.now()
         )
@@ -239,7 +239,7 @@ class InMemoryTicketAlgebraSpec extends AsyncFreeSpec with AsyncIOSpec with Matc
           showtimeId,
           seatId1,
           CustomerId(UUID.randomUUID()),
-          BigDecimal("10.00"),
+          Money.fromDollars(10, 0),
           TicketStatus.Reserved,
           LocalDateTime.now()
         )
@@ -262,7 +262,7 @@ class InMemoryTicketAlgebraSpec extends AsyncFreeSpec with AsyncIOSpec with Matc
           ShowtimeId(UUID.randomUUID()),
           SeatId("A1-1"),
           CustomerId(UUID.randomUUID()),
-          BigDecimal("10.00"),
+          Money.fromDollars(10, 0),
           TicketStatus.Reserved,
           LocalDateTime.now()
         )
@@ -288,7 +288,7 @@ class InMemoryTicketAlgebraSpec extends AsyncFreeSpec with AsyncIOSpec with Matc
           ShowtimeId(UUID.randomUUID()),
           SeatId("A1-1"),
           CustomerId(UUID.randomUUID()),
-          BigDecimal("10.00"),
+          Money.fromDollars(10, 0),
           TicketStatus.Reserved,
           LocalDateTime.now()
         )
@@ -329,7 +329,7 @@ class InMemoryTicketAlgebraSpec extends AsyncFreeSpec with AsyncIOSpec with Matc
           ShowtimeId(UUID.randomUUID()),
           SeatId("A1-1"),
           CustomerId(UUID.randomUUID()),
-          BigDecimal("10.00"),
+          Money.fromDollars(10, 0),
           TicketStatus.Reserved,
           LocalDateTime.now()
         )

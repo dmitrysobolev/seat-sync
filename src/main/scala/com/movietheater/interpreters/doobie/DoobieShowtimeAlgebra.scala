@@ -1,4 +1,4 @@
-package com.movietheater.interpreters
+package com.movietheater.interpreters.doobie
 
 import cats.effect.kernel.MonadCancelThrow
 import cats.implicits._

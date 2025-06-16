@@ -1,22 +1,26 @@
-package com.movietheater.interpreters
+package com.movietheater.interpreters.inmemory
 
 import cats.effect.Sync
 import cats.effect.Ref
 import cats.implicits._
 import com.movietheater.domain._
 import com.movietheater.algebras.{SeatAlgebra, TicketAlgebra}
+import java.util.UUID
+import scala.collection.concurrent.TrieMap
 
 class InMemorySeatAlgebra[F[_]: Sync](
   seatRef: Ref[F, Map[SeatId, Seat]],
   ticketAlgebra: TicketAlgebra[F]
 ) extends SeatAlgebra[F] {
 
+  private val seats = new TrieMap[UUID, Seat]
+
   def findById(seatId: SeatId): F[Option[Seat]] = {
     seatRef.get.map(_.get(seatId))
   }
 
   def findByTheater(theaterId: TheaterId): F[List[Seat]] = {
-    seatRef.get.map(_.values.filter(_.theaterId == theaterId).toList)
+    seatRef.get.map(_.values.filter(_.auditoriumId == theaterId).toList)
   }
 
   def findAvailableForShowtime(showtimeId: ShowtimeId): F[List[Seat]] = {
@@ -71,6 +75,34 @@ class InMemorySeatAlgebra[F[_]: Sync](
   }
 
   def deleteAll(): F[Unit] = seatRef.set(Map.empty)
+
+  override def getSeatsByShowtime(showtimeId: ShowtimeId): F[List[Seat]] =
+    seats.values.filter(_.showtimeId == showtimeId).toList.pure[F]
+
+  override def getSeatByShowtimeAndPosition(showtimeId: ShowtimeId, rowNumber: RowNumber, seatNumber: SeatNumber): F[Option[Seat]] =
+    seats.values.find(seat => 
+      seat.showtimeId == showtimeId && 
+      seat.rowNumber == rowNumber && 
+      seat.seatNumber == seatNumber
+    ).pure[F]
+
+  override def createSeat(seat: Seat): F[Seat] =
+    seats.put(seat.id, seat).as(seat)
+
+  override def createSeats(seats: List[Seat]): F[List[Seat]] =
+    seats.traverse(createSeat)
+
+  override def updateSeat(seat: Seat): F[Seat] =
+    seats.put(seat.id, seat).as(seat)
+
+  override def deleteSeat(seat: Seat): F[Unit] =
+    seats.remove(seat.id).void
+
+  override def deleteSeatsByShowtime(showtimeId: ShowtimeId): F[Unit] =
+    seats.values
+      .filter(_.showtimeId == showtimeId)
+      .foreach(seat => seats.remove(seat.id))
+      .pure[F]
 }
 
 object InMemorySeatAlgebra {
