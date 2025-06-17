@@ -2,15 +2,12 @@ package com.movietheater.domain
 
 import cats.Show
 import cats.implicits._
-import java.time.LocalDateTime
 
 case class Customer(
   id: CustomerId,
   email: String,
   firstName: String,
-  lastName: String,
-  createdAt: LocalDateTime,
-  updatedAt: LocalDateTime
+  lastName: String
 )
 
 object Customer {

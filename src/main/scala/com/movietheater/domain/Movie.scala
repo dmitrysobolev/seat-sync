@@ -2,16 +2,14 @@ package com.movietheater.domain
 
 import cats.Show
 import cats.implicits._
-import java.time.{LocalDateTime, Duration}
+import java.time.Duration
 
 case class Movie(
   id: MovieId,
   title: String,
   description: String,
   duration: Duration,
-  rating: String,
-  createdAt: LocalDateTime,
-  updatedAt: LocalDateTime
+  rating: String
 ) {
   def durationMinutes: Long = duration.toMinutes
 }

@@ -84,8 +84,8 @@ object DoobieCustomerAlgebra {
 
   private def insertQuery(customer: Customer): Update0 = {
     sql"""
-      INSERT INTO customers (id, email, first_name, last_name) 
-      VALUES (${customer.id.value}, ${customer.email}, ${customer.firstName}, ${customer.lastName})
+      INSERT INTO customers (id, email, first_name, last_name, created_at, updated_at) 
+      VALUES (${customer.id.value}, ${customer.email}, ${customer.firstName}, ${customer.lastName}, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
     """.update
   }
 

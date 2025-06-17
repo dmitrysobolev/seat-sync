@@ -8,6 +8,7 @@ import doobie.postgres.implicits._
 import com.movietheater.domain._
 import com.movietheater.algebras.MovieAlgebra
 import java.util.UUID
+import java.time.Duration
 
 class DoobieMovieAlgebra[F[_]: MonadCancelThrow](xa: Transactor[F]) extends MovieAlgebra[F] {
 
@@ -47,8 +48,14 @@ object DoobieMovieAlgebra {
   
   // Row mapping for Movie
   private implicit val movieRead: Read[Movie] = Read[(UUID, String, String, Int, String)].map {
-    case (id, title, description, duration, rating) =>
-      Movie(MovieId(id), title, description, duration, rating)
+    case (id, title, description, durationMinutes, rating) =>
+      Movie(
+        id = MovieId(id),
+        title = title,
+        description = description,
+        duration = Duration.ofMinutes(durationMinutes),
+        rating = rating
+      )
   }
   
   // SQL queries
@@ -70,8 +77,8 @@ object DoobieMovieAlgebra {
 
   private def insertQuery(movie: Movie): Update0 = {
     sql"""
-      INSERT INTO movies (id, title, description, duration_minutes, rating) 
-      VALUES (${movie.id.value}, ${movie.title}, ${movie.description}, ${movie.durationMinutes}, ${movie.rating})
+      INSERT INTO movies (id, title, description, duration_minutes, rating, created_at, updated_at) 
+      VALUES (${movie.id.value}, ${movie.title}, ${movie.description}, ${movie.durationMinutes}, ${movie.rating}, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
     """.update
   }
 
