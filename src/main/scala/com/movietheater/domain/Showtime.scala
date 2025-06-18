@@ -12,9 +12,7 @@ case class Showtime(
   startTime: LocalDateTime,
   seatTypes: Map[SeatId, SeatType],
   seatPrices: Map[SeatType, Money],
-  seatStatus: Map[SeatId, SeatStatus],
-  createdAt: LocalDateTime,
-  updatedAt: LocalDateTime
+  seatStatus: Map[SeatId, SeatStatus]
 ) {
   def getPriceForSeat(seatId: SeatId): Option[Money] = {
     seatTypes.get(seatId).flatMap(seatType => seatPrices.get(seatType))

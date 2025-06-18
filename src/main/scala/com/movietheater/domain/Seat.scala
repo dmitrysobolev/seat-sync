@@ -2,16 +2,13 @@ package com.movietheater.domain
 
 import cats.Show
 import cats.implicits._
-import java.time.LocalDateTime
 
 case class Seat(
   id: SeatId,
   theaterId: TheaterId,
   auditoriumId: AuditoriumId,
   rowNumber: RowNumber,
-  seatNumber: SeatNumber,
-  createdAt: LocalDateTime,
-  updatedAt: LocalDateTime
+  seatNumber: SeatNumber
 ) {
   def row: String = rowNumber.value.toString
   def number: Int = seatNumber.value

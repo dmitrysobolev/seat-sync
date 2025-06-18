@@ -11,9 +11,7 @@ case class Ticket(
   customerId: CustomerId,
   price: Money,
   status: TicketStatus,
-  purchasedAt: LocalDateTime,
-  createdAt: LocalDateTime,
-  updatedAt: LocalDateTime
+  purchasedAt: LocalDateTime
 )
 
 object Ticket {
