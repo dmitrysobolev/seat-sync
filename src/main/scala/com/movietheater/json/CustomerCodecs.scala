@@ -1,22 +1,19 @@
 package com.movietheater.json
 
-import com.movietheater.domain.Customer
+import com.movietheater.domain.{Customer, CustomerId}
 import io.circe.{Decoder, Encoder}
-import java.time.LocalDateTime
 
 object CustomerCodecs {
-  implicit val encoder: Encoder[Customer] = Encoder.forProduct6(
-    "id", "email", "firstName", "lastName", "createdAt", "updatedAt"
+  implicit val encoder: Encoder[Customer] = Encoder.forProduct4(
+    "id", "email", "firstName", "lastName"
   )(customer => (
     customer.id,
     customer.email,
     customer.firstName,
-    customer.lastName,
-    customer.createdAt,
-    customer.updatedAt
+    customer.lastName
   ))
   
-  implicit val decoder: Decoder[Customer] = Decoder.forProduct6(
-    "id", "email", "firstName", "lastName", "createdAt", "updatedAt"
+  implicit val decoder: Decoder[Customer] = Decoder.forProduct4(
+    "id", "email", "firstName", "lastName"
   )(Customer.apply)
 } 

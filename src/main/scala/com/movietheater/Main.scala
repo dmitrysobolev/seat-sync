@@ -193,42 +193,42 @@ object Main extends IOApp {
       val movie1Id = MovieId(UUID.randomUUID())
       val movie2Id = MovieId(UUID.randomUUID())
       val movies = Map(
-        movie1Id -> Movie(movie1Id, "The Matrix", "A computer programmer discovers reality is a simulation", Duration.ofMinutes(136), "R", now, now),
-        movie2Id -> Movie(movie2Id, "Inception", "A thief enters people's dreams to steal secrets", Duration.ofMinutes(148), "PG-13", now, now)
+        movie1Id -> Movie(movie1Id, "The Matrix", "A computer programmer discovers reality is a simulation", Duration.ofMinutes(136), "R"),
+        movie2Id -> Movie(movie2Id, "Inception", "A thief enters people's dreams to steal secrets", Duration.ofMinutes(148), "PG-13")
       )
 
       val theater1Id = TheaterId(UUID.randomUUID())
       val theater2Id = TheaterId(UUID.randomUUID())
       val theaters = Map(
-        theater1Id -> Theater(theater1Id, "Cinema One", "Downtown Mall", 100, now, now),
-        theater2Id -> Theater(theater2Id, "Grand Theater", "Uptown Plaza", 200, now, now)
+        theater1Id -> Theater(theater1Id, "Cinema One", "Downtown Mall", 100),
+        theater2Id -> Theater(theater2Id, "Grand Theater", "Uptown Plaza", 200)
       )
 
       val auditorium1Id = AuditoriumId(UUID.randomUUID())
       val auditorium2Id = AuditoriumId(UUID.randomUUID())
       val auditorium3Id = AuditoriumId(UUID.randomUUID())
       val auditoriums = Map(
-        auditorium1Id -> Auditorium(auditorium1Id, theater1Id, "Auditorium 1", now, now),
-        auditorium2Id -> Auditorium(auditorium2Id, theater1Id, "Auditorium 2", now, now),
-        auditorium3Id -> Auditorium(auditorium3Id, theater2Id, "Main Auditorium", now, now)
+        auditorium1Id -> Auditorium(auditorium1Id, theater1Id, "Auditorium 1"),
+        auditorium2Id -> Auditorium(auditorium2Id, theater1Id, "Auditorium 2"),
+        auditorium3Id -> Auditorium(auditorium3Id, theater2Id, "Main Auditorium")
       )
 
       val seats1 = ('A' to 'P').flatMap { row =>
         (1 to 25).map { number =>
           val seatId = SeatId(s"$row$number")
-          Seat(seatId, theater1Id, auditorium1Id, RowNumber(row), SeatNumber(number), now, now)
+          Seat(seatId, theater1Id, auditorium1Id, RowNumber(row), SeatNumber(number))
         }
       }.toList
       val seats2 = ('A' to 'P').flatMap { row =>
         (1 to 25).map { number =>
           val seatId = SeatId(s"$row$number")
-          Seat(seatId, theater1Id, auditorium2Id, RowNumber(row), SeatNumber(number), now, now)
+          Seat(seatId, theater1Id, auditorium2Id, RowNumber(row), SeatNumber(number))
         }
       }.toList
       val seats3 = ('A' to 'P').flatMap { row =>
         (1 to 25).map { number =>
           val seatId = SeatId(s"$row$number")
-          Seat(seatId, theater2Id, auditorium3Id, RowNumber(row), SeatNumber(number), now, now)
+          Seat(seatId, theater2Id, auditorium3Id, RowNumber(row), SeatNumber(number))
         }
       }.toList
       val allSeats = (seats1 ++ seats2 ++ seats3).map(s => s.id -> s).toMap
@@ -261,9 +261,7 @@ object Main extends IOApp {
             SeatId("A3") -> SeatStatus.Available,
             SeatId("A4") -> SeatStatus.Available,
             SeatId("A5") -> SeatStatus.Available
-          ),
-          now,
-          now
+          )
         ),
         showtime2Id -> Showtime(
           showtime2Id,
@@ -289,9 +287,7 @@ object Main extends IOApp {
             SeatId("A3") -> SeatStatus.Available,
             SeatId("A4") -> SeatStatus.Available,
             SeatId("A5") -> SeatStatus.Available
-          ),
-          now,
-          now
+          )
         ),
         showtime3Id -> Showtime(
           showtime3Id,
@@ -317,9 +313,7 @@ object Main extends IOApp {
             SeatId("A3") -> SeatStatus.Available,
             SeatId("A4") -> SeatStatus.Available,
             SeatId("A5") -> SeatStatus.Available
-          ),
-          now,
-          now
+          )
         )
       )
 
@@ -327,8 +321,8 @@ object Main extends IOApp {
       val customer1Id = CustomerId(UUID.randomUUID())
       val customer2Id = CustomerId(UUID.randomUUID())
       val customers = Map(
-        customer1Id -> Customer(customer1Id, "john@example.com", "John", "Doe", now, now),
-        customer2Id -> Customer(customer2Id, "jane@example.com", "Jane", "Doe", now, now)
+        customer1Id -> Customer(customer1Id, "john@example.com", "John", "Doe"),
+        customer2Id -> Customer(customer2Id, "jane@example.com", "Jane", "Doe")
       )
 
       // No tickets initially

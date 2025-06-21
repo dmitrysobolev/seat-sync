@@ -57,8 +57,8 @@ object DoobieTicketAlgebra {
   
   // Row mapping for Ticket
   private implicit val ticketRead: Read[Ticket] = 
-    Read[(UUID, UUID, String, UUID, Long, TicketStatus, LocalDateTime, LocalDateTime, LocalDateTime)].map {
-      case (id, showtimeId, seatId, customerId, price, status, reservationTime, createdAt, updatedAt) =>
+    Read[(UUID, UUID, String, UUID, Long, TicketStatus, LocalDateTime)].map {
+      case (id, showtimeId, seatId, customerId, price, status, reservationTime) =>
         Ticket(
           TicketId(id), 
           ShowtimeId(showtimeId), 
@@ -66,16 +66,14 @@ object DoobieTicketAlgebra {
           CustomerId(customerId), 
           Money.fromCents(price), 
           status, 
-          reservationTime,
-          createdAt,
-          updatedAt
+          reservationTime
         )
     }
   
   // SQL queries
   private def selectByIdQuery(ticketId: TicketId): Query0[Ticket] = {
     sql"""
-      SELECT id, showtime_id, seat_id, customer_id, price, status, reservation_time, created_at, updated_at 
+      SELECT id, showtime_id, seat_id, customer_id, price, status, reservation_time
       FROM tickets 
       WHERE id = ${ticketId.value}
     """.query[Ticket]
@@ -83,7 +81,7 @@ object DoobieTicketAlgebra {
 
   private def selectByCustomerQuery(customerId: CustomerId): Query0[Ticket] = {
     sql"""
-      SELECT id, showtime_id, seat_id, customer_id, price, status, reservation_time, created_at, updated_at 
+      SELECT id, showtime_id, seat_id, customer_id, price, status, reservation_time
       FROM tickets 
       WHERE customer_id = ${customerId.value}
       ORDER BY reservation_time DESC
@@ -92,7 +90,7 @@ object DoobieTicketAlgebra {
 
   private def selectByShowtimeQuery(showtimeId: ShowtimeId): Query0[Ticket] = {
     sql"""
-      SELECT id, showtime_id, seat_id, customer_id, price, status, reservation_time, created_at, updated_at 
+      SELECT id, showtime_id, seat_id, customer_id, price, status, reservation_time
       FROM tickets 
       WHERE showtime_id = ${showtimeId.value}
     """.query[Ticket]
@@ -100,7 +98,7 @@ object DoobieTicketAlgebra {
 
   private def selectBySeatAndShowtimeQuery(seatId: SeatId, showtimeId: ShowtimeId): Query0[Ticket] = {
     sql"""
-      SELECT id, showtime_id, seat_id, customer_id, price, status, reservation_time, created_at, updated_at 
+      SELECT id, showtime_id, seat_id, customer_id, price, status, reservation_time
       FROM tickets 
       WHERE seat_id = ${seatId.value} AND showtime_id = ${showtimeId.value}
     """.query[Ticket]
@@ -108,15 +106,15 @@ object DoobieTicketAlgebra {
 
   private def insertQuery(ticket: Ticket): Update0 = {
     sql"""
-      INSERT INTO tickets (id, showtime_id, seat_id, customer_id, price, status, reservation_time, created_at, updated_at) 
-      VALUES (${ticket.id.value}, ${ticket.showtimeId.value}, ${ticket.seatId.value}, ${ticket.customerId.value}, ${ticket.price.cents}, ${ticket.status}, ${ticket.purchasedAt}, ${ticket.createdAt}, ${ticket.updatedAt})
+      INSERT INTO tickets (id, showtime_id, seat_id, customer_id, price, status, reservation_time) 
+      VALUES (${ticket.id.value}, ${ticket.showtimeId.value}, ${ticket.seatId.value}, ${ticket.customerId.value}, ${ticket.price.cents}, ${ticket.status}, ${ticket.purchasedAt})
     """.update
   }
 
   private def updateStatusQuery(ticketId: TicketId, status: TicketStatus): Update0 = {
     sql"""
       UPDATE tickets 
-      SET status = $status, updated_at = CURRENT_TIMESTAMP
+      SET status = $status
       WHERE id = ${ticketId.value}
     """.update
   }

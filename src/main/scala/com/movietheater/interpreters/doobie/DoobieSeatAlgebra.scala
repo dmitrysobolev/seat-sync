@@ -90,23 +90,21 @@ object DoobieSeatAlgebra {
   
   // Row mapping for Seat
   private implicit val seatRead: Read[Seat] = 
-    Read[(String, UUID, UUID, Int, Int, LocalDateTime, LocalDateTime)].map {
-      case (id, theaterId, auditoriumId, rowNumber, seatNumber, createdAt, updatedAt) =>
+    Read[(String, UUID, UUID, String, Int)].map {
+      case (id, theaterId, auditoriumId, rowNumber, seatNumber) =>
         Seat(
           SeatId(id), 
           TheaterId(theaterId), 
           AuditoriumId(auditoriumId), 
-          RowNumber(rowNumber), 
-          SeatNumber(seatNumber), 
-          createdAt,
-          updatedAt
+          RowNumber(rowNumber.head), 
+          SeatNumber(seatNumber)
         )
     }
   
   // SQL queries
   private def selectByIdQuery(seatId: SeatId): Query0[Seat] = {
     sql"""
-      SELECT id, theater_id, auditorium_id, row_number, seat_number, created_at, updated_at 
+      SELECT id, theater_id, auditorium_id, row_number, seat_number
       FROM seats 
       WHERE id = ${seatId.value}
     """.query[Seat]
@@ -114,7 +112,7 @@ object DoobieSeatAlgebra {
 
   private def selectByTheaterQuery(theaterId: TheaterId): Query0[Seat] = {
     sql"""
-      SELECT id, theater_id, auditorium_id, row_number, seat_number, created_at, updated_at 
+      SELECT id, theater_id, auditorium_id, row_number, seat_number
       FROM seats 
       WHERE theater_id = ${theaterId.value}
       ORDER BY row_number, seat_number
@@ -123,8 +121,8 @@ object DoobieSeatAlgebra {
 
   private def insertQuery(seat: Seat): Update0 = {
     sql"""
-      INSERT INTO seats (id, theater_id, auditorium_id, row_number, seat_number, created_at, updated_at) 
-      VALUES (${seat.id.value}, ${seat.theaterId.value}, ${seat.auditoriumId.value}, ${seat.rowNumber.value}, ${seat.seatNumber.value}, ${seat.createdAt}, ${seat.updatedAt})
+      INSERT INTO seats (id, theater_id, auditorium_id, row_number, seat_number) 
+      VALUES (${seat.id.value}, ${seat.theaterId.value}, ${seat.auditoriumId.value}, ${seat.rowNumber.value.toString}, ${seat.seatNumber.value})
     """.update
   }
 
@@ -133,9 +131,8 @@ object DoobieSeatAlgebra {
       UPDATE seats 
       SET theater_id = ${seat.theaterId.value}, 
           auditorium_id = ${seat.auditoriumId.value}, 
-          row_number = ${seat.rowNumber.value},
-          seat_number = ${seat.seatNumber.value},
-          updated_at = ${seat.updatedAt}
+          row_number = ${seat.rowNumber.value.toString},
+          seat_number = ${seat.seatNumber.value}
       WHERE id = ${seat.id.value}
     """.update
   }

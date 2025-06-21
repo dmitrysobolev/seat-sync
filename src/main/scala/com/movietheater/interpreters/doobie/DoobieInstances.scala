@@ -22,16 +22,16 @@ object DoobieInstances {
   implicit val seatTypeMeta: Meta[SeatType] = {
     Meta[String].timap[SeatType](
       {
-        case "Regular" => SeatType.Regular
         case "Premium" => SeatType.Premium
         case "VIP" => SeatType.VIP
+        case "Standard" => SeatType.Standard
         case other => throw new IllegalArgumentException(s"Unknown seat type: $other")
       }
     )(
       {
-        case SeatType.Regular => "Regular"
         case SeatType.Premium => "Premium"
         case SeatType.VIP => "VIP"
+        case SeatType.Standard => "Standard"
       }
     ).asInstanceOf[Meta[SeatType]]
   }

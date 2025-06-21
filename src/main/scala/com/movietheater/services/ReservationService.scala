@@ -74,9 +74,7 @@ class ReservationService[F[_]: Sync](
           customerId = request.customerId,
           price = price,
           status = TicketStatus.Reserved,
-          purchasedAt = now,
-          createdAt = now,
-          updatedAt = now
+          purchasedAt = now
         )
       }
 

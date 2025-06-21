@@ -5,8 +5,8 @@ import io.circe.{Decoder, Encoder}
 import java.time.LocalDateTime
 
 object TicketCodecs {
-  implicit val encoder: Encoder[Ticket] = Encoder.forProduct9(
-    "id", "showtimeId", "seatId", "customerId", "price", "status", "purchasedAt", "createdAt", "updatedAt"
+  implicit val encoder: Encoder[Ticket] = Encoder.forProduct7(
+    "id", "showtimeId", "seatId", "customerId", "price", "status", "purchasedAt"
   )(ticket => (
     ticket.id,
     ticket.showtimeId,
@@ -14,12 +14,10 @@ object TicketCodecs {
     ticket.customerId,
     ticket.price,
     ticket.status,
-    ticket.purchasedAt,
-    ticket.createdAt,
-    ticket.updatedAt
+    ticket.purchasedAt
   ))
   
-  implicit val decoder: Decoder[Ticket] = Decoder.forProduct9(
-    "id", "showtimeId", "seatId", "customerId", "price", "status", "purchasedAt", "createdAt", "updatedAt"
+  implicit val decoder: Decoder[Ticket] = Decoder.forProduct7(
+    "id", "showtimeId", "seatId", "customerId", "price", "status", "purchasedAt"
   )(Ticket.apply)
 } 

@@ -19,12 +19,12 @@ class DoobieShowtimeAlgebra[F[_]: MonadCancelThrow](xa: Transactor[F]) extends S
     for {
       showtimeOpt <- selectByIdQuery(showtimeId).option.transact(xa)
       seatTypes <- selectSeatTypesQuery(showtimeId).to[List].transact(xa)
-      seatStatuses <- selectSeatStatusesQuery(showtimeId).to[List].transact(xa)
-      prices <- selectPricesQuery(showtimeId).to[List].transact(xa)
+      seatStatus <- selectSeatStatusesQuery(showtimeId).to[List].transact(xa)
+      seatPrices <- selectPricesQuery(showtimeId).to[List].transact(xa)
     } yield showtimeOpt.map(_.copy(
       seatTypes = seatTypes.toMap,
-      seatStatuses = seatStatuses.toMap,
-      prices = prices.toMap
+      seatStatus = seatStatus.toMap,
+      seatPrices = seatPrices.toMap
     ))
   }
 
@@ -34,12 +34,12 @@ class DoobieShowtimeAlgebra[F[_]: MonadCancelThrow](xa: Transactor[F]) extends S
       showtimesWithDetails <- showtimes.traverse { showtime =>
         for {
           seatTypes <- selectSeatTypesQuery(showtime.id).to[List].transact(xa)
-          seatStatuses <- selectSeatStatusesQuery(showtime.id).to[List].transact(xa)
-          prices <- selectPricesQuery(showtime.id).to[List].transact(xa)
+          seatStatus <- selectSeatStatusesQuery(showtime.id).to[List].transact(xa)
+          seatPrices <- selectPricesQuery(showtime.id).to[List].transact(xa)
         } yield showtime.copy(
           seatTypes = seatTypes.toMap,
-          seatStatuses = seatStatuses.toMap,
-          prices = prices.toMap
+          seatStatus = seatStatus.toMap,
+          seatPrices = seatPrices.toMap
         )
       }
     } yield showtimesWithDetails
@@ -51,12 +51,12 @@ class DoobieShowtimeAlgebra[F[_]: MonadCancelThrow](xa: Transactor[F]) extends S
       showtimesWithDetails <- showtimes.traverse { showtime =>
         for {
           seatTypes <- selectSeatTypesQuery(showtime.id).to[List].transact(xa)
-          seatStatuses <- selectSeatStatusesQuery(showtime.id).to[List].transact(xa)
-          prices <- selectPricesQuery(showtime.id).to[List].transact(xa)
+          seatStatus <- selectSeatStatusesQuery(showtime.id).to[List].transact(xa)
+          seatPrices <- selectPricesQuery(showtime.id).to[List].transact(xa)
         } yield showtime.copy(
           seatTypes = seatTypes.toMap,
-          seatStatuses = seatStatuses.toMap,
-          prices = prices.toMap
+          seatStatus = seatStatus.toMap,
+          seatPrices = seatPrices.toMap
         )
       }
     } yield showtimesWithDetails
@@ -68,12 +68,12 @@ class DoobieShowtimeAlgebra[F[_]: MonadCancelThrow](xa: Transactor[F]) extends S
       showtimesWithDetails <- showtimes.traverse { showtime =>
         for {
           seatTypes <- selectSeatTypesQuery(showtime.id).to[List].transact(xa)
-          seatStatuses <- selectSeatStatusesQuery(showtime.id).to[List].transact(xa)
-          prices <- selectPricesQuery(showtime.id).to[List].transact(xa)
+          seatStatus <- selectSeatStatusesQuery(showtime.id).to[List].transact(xa)
+          seatPrices <- selectPricesQuery(showtime.id).to[List].transact(xa)
         } yield showtime.copy(
           seatTypes = seatTypes.toMap,
-          seatStatuses = seatStatuses.toMap,
-          prices = prices.toMap
+          seatStatus = seatStatus.toMap,
+          seatPrices = seatPrices.toMap
         )
       }
     } yield showtimesWithDetails
@@ -83,8 +83,8 @@ class DoobieShowtimeAlgebra[F[_]: MonadCancelThrow](xa: Transactor[F]) extends S
     for {
       _ <- insertQuery(showtime).run.transact(xa)
       _ <- insertSeatTypesQuery(showtime.id, showtime.seatTypes).run.transact(xa)
-      _ <- insertSeatStatusesQuery(showtime.id, showtime.seatStatuses).run.transact(xa)
-      _ <- insertPricesQuery(showtime.id, showtime.prices).run.transact(xa)
+      _ <- insertSeatStatusesQuery(showtime.id, showtime.seatStatus).run.transact(xa)
+      _ <- insertPricesQuery(showtime.id, showtime.seatPrices).run.transact(xa)
     } yield showtime
   }
 
@@ -97,8 +97,8 @@ class DoobieShowtimeAlgebra[F[_]: MonadCancelThrow](xa: Transactor[F]) extends S
           _ <- deleteSeatStatusesQuery(showtime.id).run.transact(xa)
           _ <- deletePricesQuery(showtime.id).run.transact(xa)
           _ <- insertSeatTypesQuery(showtime.id, showtime.seatTypes).run.transact(xa)
-          _ <- insertSeatStatusesQuery(showtime.id, showtime.seatStatuses).run.transact(xa)
-          _ <- insertPricesQuery(showtime.id, showtime.prices).run.transact(xa)
+          _ <- insertSeatStatusesQuery(showtime.id, showtime.seatStatus).run.transact(xa)
+          _ <- insertPricesQuery(showtime.id, showtime.seatPrices).run.transact(xa)
         } yield ()
       } else ().pure[F]
     } yield if (updated > 0) Some(showtime) else None
@@ -128,8 +128,8 @@ object DoobieShowtimeAlgebra {
 
   // Row mapping for Showtime
   private implicit val showtimeRead: Read[Showtime] =
-    Read[(UUID, UUID, UUID, UUID, LocalDateTime, LocalDateTime, LocalDateTime)].map {
-      case (id, movieId, theaterId, auditoriumId, startTime, createdAt, updatedAt) =>
+    Read[(UUID, UUID, UUID, UUID, LocalDateTime)].map {
+      case (id, movieId, theaterId, auditoriumId, startTime) =>
         Showtime(
           id = ShowtimeId(id),
           movieId = MovieId(movieId),
@@ -138,18 +138,16 @@ object DoobieShowtimeAlgebra {
           startTime = startTime,
           seatTypes = Map.empty,    // Loaded separately
           seatPrices = Map.empty,   // Loaded separately
-          seatStatus = Map.empty,   // Loaded separately
-          createdAt = createdAt,
-          updatedAt = updatedAt
+          seatStatus = Map.empty    // Loaded separately
         )
     }
 
   private implicit val seatTypeMoneyRead: Read[(SeatType, Money)] =
     Read[(String, Long)].map { case (seatTypeStr, cents) =>
       val seatType = seatTypeStr match {
-        case "standard" => SeatType.Standard
-        case "premium" => SeatType.Premium
-        case "vip" => SeatType.VIP
+        case "Standard" => SeatType.Standard
+        case "Premium" => SeatType.Premium
+        case "VIP" => SeatType.VIP
         case invalid => throw new IllegalArgumentException(s"Invalid seat type: $invalid")
       }
       (seatType, Money.fromCents(cents))
@@ -158,9 +156,9 @@ object DoobieShowtimeAlgebra {
   private implicit val seatTypeAssignmentRead: Read[(SeatId, SeatType)] =
     Read[(String, String)].map { case (seatIdStr, seatTypeStr) =>
       val seatType = seatTypeStr match {
-        case "standard" => SeatType.Standard
-        case "premium" => SeatType.Premium
-        case "vip" => SeatType.VIP
+        case "Standard" => SeatType.Standard
+        case "Premium" => SeatType.Premium
+        case "VIP" => SeatType.VIP
         case invalid => throw new IllegalArgumentException(s"Invalid seat type: $invalid")
       }
       (SeatId(seatIdStr), seatType)
@@ -180,7 +178,7 @@ object DoobieShowtimeAlgebra {
   // SQL queries
   private def selectByIdQuery(showtimeId: ShowtimeId): Query0[Showtime] = {
     sql"""
-      SELECT id, movie_id, theater_id, auditorium_id, start_time, created_at, updated_at 
+      SELECT id, movie_id, theater_id, auditorium_id, start_time
       FROM showtimes 
       WHERE id = ${showtimeId.value}
     """.query[Showtime]
@@ -212,7 +210,7 @@ object DoobieShowtimeAlgebra {
 
   private def selectByMovieQuery(movieId: MovieId): Query0[Showtime] = {
     sql"""
-      SELECT id, movie_id, theater_id, auditorium_id, start_time, end_time, created_at, updated_at 
+      SELECT id, movie_id, theater_id, auditorium_id, start_time
       FROM showtimes 
       WHERE movie_id = ${movieId.value}
     """.query[Showtime]
@@ -220,7 +218,7 @@ object DoobieShowtimeAlgebra {
 
   private def selectByTheaterQuery(theaterId: TheaterId): Query0[Showtime] = {
     sql"""
-      SELECT id, movie_id, theater_id, auditorium_id, start_time, end_time, created_at, updated_at 
+      SELECT id, movie_id, theater_id, auditorium_id, start_time
       FROM showtimes 
       WHERE theater_id = ${theaterId.value}
     """.query[Showtime]
@@ -228,7 +226,7 @@ object DoobieShowtimeAlgebra {
 
   private def selectByDateRangeQuery(from: LocalDateTime, to: LocalDateTime): Query0[Showtime] = {
     sql"""
-      SELECT id, movie_id, theater_id, auditorium_id, start_time, end_time, created_at, updated_at 
+      SELECT id, movie_id, theater_id, auditorium_id, start_time
       FROM showtimes 
       WHERE start_time >= $from AND start_time <= $to
     """.query[Showtime]
@@ -237,15 +235,13 @@ object DoobieShowtimeAlgebra {
   private def insertQuery(showtime: Showtime): Update0 = {
     sql"""
       INSERT INTO showtimes (
-        id, movie_id, theater_id, auditorium_id, start_time, created_at, updated_at
+        id, movie_id, theater_id, auditorium_id, start_time
       ) VALUES (
         ${showtime.id.value}, 
         ${showtime.movieId.value}, 
         ${showtime.theaterId.value}, 
         ${showtime.auditoriumId.value}, 
-        ${showtime.startTime}, 
-        ${showtime.createdAt}, 
-        ${showtime.updatedAt}
+        ${showtime.startTime}
       )
     """.update
   }
@@ -277,8 +273,7 @@ object DoobieShowtimeAlgebra {
       SET movie_id = ${showtime.movieId.value}, 
           theater_id = ${showtime.theaterId.value}, 
           auditorium_id = ${showtime.auditoriumId.value}, 
-          start_time = ${showtime.startTime},
-          updated_at = CURRENT_TIMESTAMP
+          start_time = ${showtime.startTime}
       WHERE id = ${showtime.id.value}
     """.update
   }
