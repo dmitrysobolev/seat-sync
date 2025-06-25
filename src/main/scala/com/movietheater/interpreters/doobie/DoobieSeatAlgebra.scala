@@ -60,28 +60,6 @@ class DoobieSeatAlgebra[F[_]: MonadCancelThrow](
   def deleteAll(): F[Unit] = {
     sql"DELETE FROM seats".update.run.transact(xa).void
   }
-
-  // These methods are no longer supported since Seat doesn't have showtimeId
-  override def getSeatsByShowtime(showtimeId: ShowtimeId): F[List[Seat]] =
-    MonadCancelThrow[F].raiseError(new NotImplementedError("getSeatsByShowtime not supported - Seat no longer has showtimeId"))
-
-  override def getSeatByShowtimeAndPosition(showtimeId: ShowtimeId, rowNumber: RowNumber, seatNumber: SeatNumber): F[Option[Seat]] =
-    MonadCancelThrow[F].raiseError(new NotImplementedError("getSeatByShowtimeAndPosition not supported - Seat no longer has showtimeId"))
-
-  override def createSeat(seat: Seat): F[Seat] =
-    create(seat)
-
-  override def createSeats(seatList: List[Seat]): F[List[Seat]] =
-    createMany(seatList)
-
-  override def updateSeat(seat: Seat): F[Seat] =
-    update(seat).map(_.getOrElse(seat))
-
-  override def deleteSeat(seat: Seat): F[Unit] =
-    delete(seat.id).void
-
-  override def deleteSeatsByShowtime(showtimeId: ShowtimeId): F[Unit] =
-    MonadCancelThrow[F].raiseError(new NotImplementedError("deleteSeatsByShowtime not supported - Seat no longer has showtimeId"))
 }
 
 object DoobieSeatAlgebra {
