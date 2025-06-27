@@ -41,10 +41,8 @@ lazy val root = (project in file("."))
       // Testing dependencies
       "org.scalatest" %% "scalatest" % "3.2.17" % Test,
       "org.typelevel" %% "cats-effect-testing-scalatest" % "1.5.0" % Test,
-      "org.typelevel" %% "munit-cats-effect-3" % "1.0.7" % Test,
       "org.tpolecat" %% "doobie-scalatest" % "1.0.0-RC4" % Test,
       "org.testcontainers" % "postgresql" % "1.19.3" % Test,
-      "org.scalameta" %% "munit" % "1.0.0-M10" % Test,
       "org.scalacheck" %% "scalacheck" % "1.17.0" % Test
     )
   ) 
